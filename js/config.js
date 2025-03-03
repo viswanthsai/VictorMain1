@@ -1,7 +1,5 @@
 /**
  * Configuration file for connecting to the backend API
- * This file attempts to establish a connection with the API server
- * by trying different possible URLs.
  */
 
 (function() {
@@ -88,3 +86,8 @@
     window.API_CONFIG.refreshConnection();
   });
 })();
+
+// Use production config if on GitHub Pages
+if (window.location.hostname.includes('github.io')) {
+  document.write('<script src="js/config.prod.js"><\/script>');
+}
