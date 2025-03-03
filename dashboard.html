@@ -12,6 +12,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- Config script -->
   <script src="js/config.js"></script>
+  <script>
+    // Use production config if on GitHub Pages
+    if (window.location.hostname.includes('github.io')) {
+      document.write('<script src="js/config.prod.js"><\/script>');
+    }
+  </script>
   <script src="js/notification.js"></script>
   <script src="js/task-utils.js"></script>
   <script src="js/main.js"></script>
@@ -560,8 +566,7 @@
                 <div class="flex items-center mb-2">
                   <div class="w-3 h-3 rounded-full bg-primary mr-2"></div>
                   <span class="text-sm">IT & Tech</span>
-                  <span class="ml-auto text-sm font-medium">60%</span>
-                </div>
+                  <span class="ml-auto text-sm font-medium">60%</                </div>
                 <div class="flex items-center mb-2">
                   <div class="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
                   <span class="text-sm">Home Services</span>

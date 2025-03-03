@@ -99,6 +99,15 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+// Add a route handler for the root path
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Victor API Server',
+    status: 'Running',
+    documentation: 'Access /api/status for server status'
+  });
+});
+
 // User registration
 app.post('/api/signup', async (req, res) => {
   try {
