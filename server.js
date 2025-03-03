@@ -4,7 +4,7 @@ const bodyParser = require('body-parser');
 const fs = require('fs').promises;
 const path = require('path');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
 // Initialize express app
@@ -15,7 +15,11 @@ const PORT = process.env.PORT || 9000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-for-development-only';
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['https://viswanthsai.github.io', 'http://127.0.0.1:5502', 'http://localhost:5502'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
@@ -553,10 +557,9 @@ async function startServer() {
     await ensureDataDirExists();
     
     // Start listening
+    const PORT = process.env.PORT || 9000;
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
-      console.log(`- API endpoint: http://localhost:${PORT}/api/status`);
-      console.log(`- Dashboard: http://localhost:${PORT}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
