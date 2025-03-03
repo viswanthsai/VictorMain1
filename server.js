@@ -16,12 +16,20 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-for-development-on
 
 // Middleware
 app.use(cors({
-  origin: ['https://viswanthsai.github.io', 'http://127.0.0.1:5502', 'http://localhost:5502'],
+  origin: [
+    'https://viswanthsai.github.io', 
+    'http://127.0.0.1:5502', 
+    'http://localhost:5502',
+    'https://victormain1.onrender.com'  // Add this line
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
 app.use(bodyParser.json());
 app.use(express.static('public'));
+
+// Serve static files from the root directory
+app.use(express.static(path.join(__dirname)));
 
 // Data file paths
 const USERS_FILE = path.join(__dirname, 'data', 'users.json');
@@ -101,11 +109,20 @@ app.get('/api/status', (req, res) => {
 
 // Add a route handler for the root path
 app.get('/', (req, res) => {
-  res.json({
-    message: 'Victor API Server',
-    status: 'Running',
-    documentation: 'Access /api/status for server status'
-  });
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Handle all other routes to serve the correct HTML file
+app.get('/:page', (req, res) => {
+  const page = req.params.page;
+  // Check if the requested file exists
+  const filePath = path.join(__dirname, page);
+  
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.sendFile(path.join(__dirname, 'index.html'));
+  }
 });
 
 // User registration

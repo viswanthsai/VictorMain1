@@ -83,7 +83,10 @@ document.addEventListener('DOMContentLoaded', function() {
    * @returns {Promise} Promise resolving to the API response
    */
   async function registerUser(fullname, email, password) {
-    const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+    // Force using the Render URL when on Render domain
+    const API_URL = window.location.hostname === 'victormain1.onrender.com' 
+      ? 'https://victormain1.onrender.com' 
+      : (window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000');
     
     // Show loading state
     const submitButton = signupForm.querySelector('button[type="submit"]');
