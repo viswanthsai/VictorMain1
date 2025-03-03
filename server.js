@@ -6,11 +6,22 @@ const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
+const User = require('./models/User');
+const Task = require('./models/Task');
 
 const app = express();
 const RENDER_URL = 'https://victormain1.onrender.com';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-for-development-only';
 const PORT = process.env.PORT || 9000;
+
+// MongoDB connection string (use environment variables in production)
+const MONGODB_URI = "mongodb+srv://viswanthsai:EGY4GjKbtoiLXl2f@cluster0.6ndpu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+
+// Connect to MongoDB
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB Atlas'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
 app.use(cors({
   origin: [
@@ -139,47 +150,32 @@ app.post('/api/signup', async (req, res) => {
       return res.status(400).json({ message: 'Invalid email format' });
     }
     
-    // Read existing users
-    const users = await readData(USERS_FILE);
-    
-    // Check if email already exists
-    const existingUser = users.find(user => user.email.toLowerCase() === email.toLowerCase());
+    // Check if email exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return res.status(409).json({ message: 'Email already in use' });
     }
     
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
     // Create new user
-    const newUser = {
-      id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
+    const user = new User({
       fullname,
       email,
-      password: hashedPassword,
-      createdAt: new Date().toISOString(),
-      role: 'user'
-    };
+      password // Will be hashed by the pre-save hook
+    });
     
-    // Add to users array
-    users.push(newUser);
-    
-    // Write back to file
-    await writeData(USERS_FILE, users);
+    await user.save();
     
     // Generate JWT token
     const token = jwt.sign(
-      { id: newUser.id, email: newUser.email, role: newUser.role },
+      { id: user._id, email: user.email, role: user.role },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
     
-    // Return user info and token (excluding password)
-    const { password: _, ...userWithoutPassword } = newUser;
     res.status(201).json({
       token,
-      userId: newUser.id,
-      username: newUser.fullname,
+      userId: user._id,
+      username: user.fullname,
       message: 'User registered successfully'
     });
   } catch (error) {
@@ -198,37 +194,21 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
     
-    // Read users
-    const users = await readData(USERS_FILE);
-    
     // Find user by email
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
     
     // Compare passwords
-    let passwordMatch;
-    
-    // Handle both bcrypt and plain SHA-256 hashes (for demo data)
-    if (user.password.startsWith('$2b$')) {
-      // Bcrypt hash
-      passwordMatch = await bcrypt.compare(password, user.password);
-    } else {
-      // For demo purposes - plain SHA-256 comparison
-      // In production, always use bcrypt
-      const crypto = require('crypto');
-      const hash = crypto.createHash('sha256').update(password).digest('hex');
-      passwordMatch = (hash === user.password);
-    }
-    
+    const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
     
     // Generate JWT token
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user._id, email: user.email, role: user.role },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -236,7 +216,7 @@ app.post('/api/login', async (req, res) => {
     // Return user info and token
     res.json({
       token,
-      userId: user.id,
+      userId: user._id,
       username: user.fullname,
       message: 'Login successful'
     });
@@ -307,7 +287,7 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
 // Get all tasks
 app.get('/api/tasks', async (req, res) => {
   try {
-    const tasks = await readData(TASKS_FILE);
+    const tasks = await Task.find();
     res.json(tasks);
   } catch (error) {
     console.error('Error in /api/tasks:', error);
@@ -325,40 +305,29 @@ app.post('/api/tasks', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Title and description are required' });
     }
     
-    // Get all tasks
-    const tasks = await readData(TASKS_FILE);
-    
     // Get user info
-    const users = await readData(USERS_FILE);
-    const user = users.find(u => u.id === req.user.id);
+    const user = await User.findById(req.user.id);
     
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
     
     // Create new task
-    const newTask = {
-      id: tasks.length > 0 ? Math.max(...tasks.map(t => t.id)) + 1 : 1,
+    const task = new Task({
       title,
       description,
       category: category || 'Other',
       location: location || 'Remote',
       budget: budget || null,
       deadline: deadline || null,
-      status: 'Open',
-      createdAt: new Date().toISOString(),
-      userId: req.user.id,
+      userId: user._id,
       createdBy: user.fullname
-    };
+    });
     
-    // Add to tasks array
-    tasks.push(newTask);
-    
-    // Write back to file
-    await writeData(TASKS_FILE, tasks);
+    await task.save();
     
     // Return the new task
-    res.status(201).json(newTask);
+    res.status(201).json(task);
   } catch (error) {
     console.error('Error in POST /api/tasks:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
