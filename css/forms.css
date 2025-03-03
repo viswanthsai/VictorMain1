@@ -1,0 +1,189 @@
+/* Custom form styling for Victor */
+
+/* Focus states with more visible outline */
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.25);
+  border-color: #1a73e8;
+}
+
+/* Rich text editor styles */
+.rich-editor {
+  min-height: 150px;
+  padding: 0.75rem;
+  overflow-y: auto;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.rich-editor:focus {
+  outline: none;
+}
+
+.rich-editor p {
+  margin-bottom: 1em;
+}
+
+.rich-editor ul, 
+.rich-editor ol {
+  margin-left: 1.5em;
+  margin-bottom: 1em;
+}
+
+.rich-editor ul {
+  list-style-type: disc;
+}
+
+.rich-editor ol {
+  list-style-type: decimal;
+}
+
+.rich-editor li {
+  margin-bottom: 0.5em;
+}
+
+/* Toolbar button hover effects */
+.editor-toolbar button {
+  transition: all 0.2s;
+  border-radius: 0.25rem;
+}
+
+.editor-toolbar button:hover {
+  background-color: rgba(26, 115, 232, 0.1);
+}
+
+.editor-toolbar button.active {
+  background-color: rgba(26, 115, 232, 0.15);
+  color: #1a73e8;
+}
+
+/* File upload area styles */
+.file-drop-area {
+  transition: all 0.2s;
+}
+
+.file-drop-area.dragover {
+  background-color: rgba(26, 115, 232, 0.05);
+  border-color: #1a73e8;
+}
+
+/* Form validation styles */
+.is-invalid {
+  border-color: #d93025 !important;
+  background-color: rgba(217, 48, 37, 0.05) !important;
+}
+
+.invalid-feedback {
+  color: #d93025;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+/* Floating labels effect */
+.form-floating {
+  position: relative;
+}
+
+.form-floating input,
+.form-floating select {
+  height: 3.5rem;
+  padding-top: 1.25rem;
+}
+
+.form-floating label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  padding: 1rem 0.75rem;
+  pointer-events: none;
+  transform-origin: 0 0;
+  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.form-floating input:focus ~ label,
+.form-floating input:not(:placeholder-shown) ~ label,
+.form-floating select:focus ~ label,
+.form-floating select:not([value=""]):not([value="default"]) ~ label {
+  transform: scale(0.85) translateY(-0.5rem);
+  opacity: 0.65;
+}
+
+/* Checkbox and radio custom styling */
+.custom-checkbox {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.custom-checkbox input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkmark {
+  height: 1.25rem;
+  width: 1.25rem;
+  background-color: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
+  margin-right: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.custom-checkbox:hover input ~ .checkmark {
+  background-color: #f3f4f6;
+}
+
+.custom-checkbox input:checked ~ .checkmark {
+  background-color: #1a73e8;
+  border-color: #1a73e8;
+}
+
+.checkmark:after {
+  content: "";
+  display: none;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.custom-checkbox input:checked ~ .checkmark:after {
+  display: block;
+}
+
+/* Button loading state */
+.btn-loading {
+  position: relative;
+  color: transparent !important;
+}
+
+.btn-loading:after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  height: 1.25rem;
+  width: 1.25rem;
+  margin-left: -0.625rem;
+  margin-top: -0.625rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 0.75s infinite linear;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

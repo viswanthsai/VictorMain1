@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Post a Task - Victor</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Config script -->
+  <script src="js/config.js"></script>
+  <!-- Notification system -->
+  <script src="js/notification.js"></script>
+  <!-- Configure Tailwind -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              DEFAULT: '#1a73e8',
+              dark: '#1557b0',
+              light: '#e8f0fe',
+            },
+            secondary: '#5f6368',
+            success: '#0d904f',
+            warning: '#f9ab00',
+            danger: '#d93025',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="flex flex-col min-h-screen bg-gray-50 font-sans pt-16">
+  <!-- Header -->
+  <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-50">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between py-3">
+        <a class="text-primary font-bold text-2xl flex items-center" href="index.html">
+          <span class="bg-gradient-to-r from-primary to-blue-600 text-white p-1.5 rounded mr-1.5 flex items-center justify-center w-8 h-8">V</span>ictor
+        </a>
+        
+        <!-- Search bar - desktop -->
+        <div class="hidden md:flex flex-grow max-w-xl mx-8">
+          <div class="relative w-full">
+            <input type="text" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-search text-gray-400"></i>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Mobile menu button -->
+        <button class="md:hidden text-gray-600 focus:outline-none" id="mobile-menu-button">
+          <i class="fas fa-bars text-xl"></i>
+        </button>
+        
+        <!-- Desktop nav menu -->
+        <nav class="hidden md:flex items-center space-x-1">
+          <a href="index.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Home</a>
+          <a href="tasks.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Browse Tasks</a>
+          <a href="post-task.html" class="px-3 py-2 text-primary bg-primary-light rounded-md transition-colors">Post a Task</a>
+          
+          <!-- Notifications dropdown -->
+          <div class="relative">
+            <button class="p-2 text-gray-600 hover:text-primary rounded-full hover:bg-gray-100 relative" id="notifications-button">
+              <i class="fas fa-bell"></i>
+              <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full" id="notifications-count">0</span>
+            </button>
+            <div class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg py-1 z-10 hidden border border-gray-100" id="notifications-dropdown">
+              <div class="px-4 py-3 border-b border-gray-100">
+                <h3 class="font-semibold text-gray-900">Notifications</h3>
+              </div>
+              <div class="max-h-64 overflow-y-auto" id="notifications-container">
+                <div class="text-center py-4 text-gray-500">No notifications yet</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Login/Signup options (visible when logged out) -->
+          <div class="flex items-center space-x-2" id="auth-buttons">
+            <a class="px-4 py-2 text-gray-700 font-medium hover:text-primary transition-colors" href="login.html" id="login-menu-item">
+              Log In
+            </a>
+            <a class="px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors" href="signup.html" id="signup-menu-item">
+              Sign Up
+            </a>
+          </div>
+          
+          <!-- User dropdown (hidden by default, shown when logged in) -->
+          <div class="relative hidden" id="user-menu-container">
+            <button class="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-full transition-colors" id="user-menu-button">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-400 to-blue-500 text-white flex items-center justify-center font-bold mr-2" id="user-avatar">V</div>
+              <span class="font-medium mr-1" id="username-display">User</span>
+              <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+            </button>
+            <div class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-1 z-10 hidden border border-gray-100" id="user-dropdown">
+              <div class="px-4 py-3 border-b border-gray-100">
+                <p class="text-sm font-medium text-gray-900" id="user-name-dropdown">User</p>
+                <p class="text-sm text-gray-500 truncate" id="user-email-dropdown">user@example.com</p>
+              </div>
+              <a href="dashboard.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-tachometer-alt w-5 text-gray-400 mr-2"></i> Dashboard
+              </a>
+              <a href="profile.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-user-circle w-5 text-gray-400 mr-2"></i> My Profile
+              </a>
+              <a href="accepted-tasks.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-check-circle w-5 text-gray-400 mr-2"></i> Tasks I'm Working On
+              </a>
+              <div class="border-t border-gray-100 my-1"></div>
+              <a href="#" id="logout-button" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-sign-out-alt w-5 text-gray-400 mr-2"></i> Logout
+              </a>
+            </div>
+          </div>
+        </nav>
+      </div>
+    </div>
+    
+    <!-- Mobile menu (hidden by default) -->
+    <div class="md:hidden bg-white border-t border-gray-100 px-4 py-2 hidden" id="mobile-menu">
+      <!-- Mobile search -->
+      <div class="relative mb-4">
+        <input type="text" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <i class="fas fa-search text-gray-400"></i>
+        </div>
+      </div>
+      
+      <div class="flex flex-col space-y-1">
+        <a href="index.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Home</a>
+        <a href="tasks.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Browse Tasks</a>
+        <a href="post-task.html" class="px-2 py-2 text-primary bg-primary-light rounded-md">Post a Task</a>
+        <div class="border-t border-gray-100 my-1 pt-1" id="mobile-auth-links">
+          <a href="login.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Log In</a>
+          <a href="signup.html" class="px-2 py-2 text-primary font-medium">Create an Account</a>
+        </div>
+        <div id="mobile-user-links" class="hidden">
+          <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="dashboard.html">
+            <i class="fas fa-tachometer-alt w-5 mr-2 text-gray-400"></i> Dashboard
+          </a>
+          <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="profile.html">
+            <i class="fas fa-user w-5 mr-2 text-gray-400"></i> My Profile
+          </a>
+          <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="accepted-tasks.html">
+            <i class="fas fa-check-circle w-5 mr-2 text-gray-400"></i> Tasks I'm Working On
+          </a>
+          <div class="border-t border-gray-100 my-1"></div>
+          <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="#" id="mobile-logout-button">
+            <i class="fas fa-sign-out-alt w-5 mr-2 text-gray-400"></i> Logout
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-grow py-8">
+    <div class="container mx-auto px-4">
+      <!-- Page header with improved styling -->
+      <div class="mx-auto max-w-3xl mb-8">
+        <h1 class="text-3xl font-bold mb-2 text-gray-900">Post a Task</h1>
+        <p class="text-gray-600">Describe your task in detail to find the perfect person for the job.</p>
+      </div>
+      
+      <!-- Task creation form - with consistent styling -->
+      <div class="bg-white shadow-sm rounded-xl overflow-hidden mx-auto max-w-3xl border border-gray-100">
+        <form id="task-form" class="p-6 space-y-6">
+          <!-- Task title -->
+          <div>
+            <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Task Title *</label>
+            <input type="text" id="title" name="title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" 
+              placeholder="E.g., Website Development, Home Cleaning, Math Tutoring" required>
+            <p class="text-xs text-gray-500 mt-1">Be clear and specific (75 characters max)</p>
+          </div>
+          
+          <!-- Description with rich text editor -->
+          <div>
+            <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Task Description *</label>
+            <div class="border border-gray-300 rounded-lg overflow-hidden">
+              <!-- Simple rich text toolbar -->
+              <div class="flex items-center bg-gray-50 px-3 py-2 border-b border-gray-300">
+                <button type="button" class="text-gray-600 hover:text-gray-900 p-1" data-format="bold" title="Bold">
+                  <i class="fas fa-bold"></i>
+                </button>
+                <button type="button" class="text-gray-600 hover:text-gray-900 p-1" data-format="italic" title="Italic">
+                  <i class="fas fa-italic"></i>
+                </button>
+                <button type="button" class="text-gray-600 hover:text-gray-900 p-1" data-format="underline" title="Underline">
+                  <i class="fas fa-underline"></i>
+                </button>
+                <span class="border-r border-gray-300 h-6 mx-2"></span>
+                <button type="button" class="text-gray-600 hover:text-gray-900 p-1" data-format="insertUnorderedList" title="Bullet List">
+                  <i class="fas fa-list-ul"></i>
+                </button>
+                <button type="button" class="text-gray-600 hover:text-gray-900 p-1" data-format="insertOrderedList" title="Numbered List">
+                  <i class="fas fa-list-ol"></i>
+                </button>
+              </div>
+              <!-- Editable content area -->
+              <div id="description-editor" class="px-4 py-3 min-h-[150px]" contenteditable="true"></div>
+              <input type="hidden" id="description" name="description">
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Include all necessary details about your task</p>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Category -->
+            <div>
+              <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+              <div class="relative">
+                <select id="category" name="category" class="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg appearance-none bg-no-repeat focus:ring-2 focus:ring-primary focus:border-primary" required
+                  style="background-position: right 0.5rem center; background-image: url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3E%3Cpath stroke=\'%236B7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3E%3C/svg%3E');">
+                  <option value="" disabled selected>Select a category</option>
+                  <option value="Home Services">Home Services</option>
+                  <option value="Delivery">Delivery & Moving</option>
+                  <option value="IT & Tech">IT & Technology</option>
+                  <option value="Tutoring">Tutoring & Education</option>
+                  <option value="Events">Events & Photography</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+            
+            <!-- Location -->
+            <div>
+              <label for="location" class="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+              <div class="relative">
+                <input type="text" id="location" name="location" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" 
+                  placeholder="Enter city or 'Remote'" required>
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <i class="fas fa-map-marker-alt text-gray-400"></i>
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Type "Remote" if location doesn't matter</p>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Budget -->
+            <div>
+              <label for="budget" class="block text-sm font-medium text-gray-700 mb-1">Budget (₹)</label>
+              <div class="relative">
+                <input type="number" id="budget" name="budget" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" 
+                  placeholder="Enter amount" min="0">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <i class="fas fa-rupee-sign text-gray-400"></i>
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">Leave blank if the price is negotiable</p>
+            </div>
+            
+            <!-- Deadline -->
+            <div>
+              <label for="deadline" class="block text-sm font-medium text-gray-700 mb-1">Deadline (Optional)</label>
+              <div class="relative">
+                <input type="date" id="deadline" name="deadline" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <i class="fas fa-calendar text-gray-400"></i>
+                </div>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">When does this task need to be completed?</p>
+            </div>
+          </div>
+          
+          <!-- File attachments -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Attachments (Optional)</label>
+            <div class="border-2 border-dashed border-gray-300 rounded-lg px-6 py-8 text-center cursor-pointer hover:bg-gray-50 transition-colors" id="file-drop-area">
+              <input type="file" id="file-input" class="hidden" multiple>
+              <div class="mb-3">
+                <i class="fas fa-cloud-upload-alt text-3xl text-gray-400"></i>
+              </div>
+              <p class="text-sm text-gray-600 mb-1">Drag files here or click to upload</p>
+              <p class="text-xs text-gray-500">JPG, PNG, PDF up to 5MB each</p>
+            </div>
+            <div class="mt-2 space-y-2 hidden" id="file-preview-container"></div>
+          </div>
+          
+          <!-- Privacy option -->
+          <div class="flex items-center">
+            <input type="checkbox" id="private-task" name="private-task" class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+            <label for="private-task" class="ml-2 block text-sm text-gray-700">
+              Make this task private (only visible to specific users or by invite)
+            </label>
+          </div>
+          
+          <!-- Buttons with consistent styling -->
+          <div class="flex flex-col sm:flex-row justify-end pt-4 border-t border-gray-200 space-y-3 sm:space-y-0 sm:space-x-3">
+            <button type="button" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors" id="preview-button">
+              <i class="fas fa-eye mr-2"></i>Preview
+            </button>
+            <button type="button" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors" id="save-draft-button">
+              <i class="fas fa-save mr-2"></i>Save Draft
+            </button>
+            <button type="submit" class="px-6 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors flex items-center justify-center min-w-[120px]" id="submit-button">
+              <i class="fas fa-paper-plane mr-2"></i>Post Task
+            </button>
+          </div>
+        </form>
+      </div>
+      
+      <!-- Tips section with consistent styling -->
+      <div class="mx-auto max-w-3xl mt-8 bg-blue-50 rounded-xl p-6 border border-blue-100">
+        <h3 class="text-lg font-medium mb-3 flex items-center text-primary">
+          <i class="fas fa-lightbulb mr-2"></i> Tips for a Great Task Post
+        </h3>
+        <ul class="space-y-3 text-sm text-gray-700">
+          <li class="flex items-start">
+            <i class="fas fa-check-circle text-primary mt-0.5 mr-3"></i>
+            <span>Be specific about what you need to be done</span>
+          </li>
+          <li class="flex items-start">
+            <i class="fas fa-check-circle text-primary mt-0.5 mr-3"></i>
+            <span>Include any special requirements or qualifications needed</span>
+          </li>
+          <li class="flex items-start">
+            <i class="fas fa-check-circle text-primary mt-0.5 mr-3"></i>
+            <span>Set a realistic budget based on the complexity of the task</span>
+          </li>
+          <li class="flex items-start">
+            <i class="fas fa-check-circle text-primary mt-0.5 mr-3"></i>
+            <span>Add photos or documents if they help explain the task better</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </main>
+  
+  <!-- Preview Modal with consistent styling -->
+  <div id="preview-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-xl shadow-lg mx-4 md:mx-auto max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-xl font-bold text-gray-900">Task Preview</h3>
+          <button id="close-preview" class="text-gray-500 hover:text-gray-700">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+        <div id="preview-content" class="space-y-6">
+          <!-- Preview content will be inserted here -->
+        </div>
+        <div class="mt-6 flex justify-end">
+          <button id="preview-edit-button" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 mr-3">
+            Edit
+          </button>
+          <button id="preview-publish-button" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg">
+            Publish Task
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Footer with consistent styling -->
+  <footer class="bg-gray-800 text-white py-8 mt-12">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-4 gap-8">
+        <div>
+          <a class="text-white font-bold text-2xl flex items-center mb-4" href="index.html">
+            <span class="bg-white text-primary p-1.5 rounded mr-1.5 flex items-center justify-center w-8 h-8">V</span>ictor
+          </a>
+          <p class="text-gray-300 mb-4">Connecting people for tasks - anytime, anywhere. Get help or help others.</p>
+          <div class="flex space-x-4">
+            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-twitter"></i></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-instagram"></i></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-linkedin-in"></i></a>
+          </div>
+        </div>
+        
+        <div>
+          <h4 class="font-semibold mb-4 text-lg">For Task Posters</h4>
+          <ul class="space-y-2">
+            <li><a href="post-task.html" class="text-gray-300 hover:text-white transition-colors">Post a Task</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">How it Works</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Pricing</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">FAQ</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 class="font-semibold mb-4 text-lg">For Task Performers</h4>
+          <ul class="space-y-2">
+            <li><a href="tasks.html" class="text-gray-300 hover:text-white transition-colors">Browse Tasks</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Task Categories</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Earn Money</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Success Stories</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 class="font-semibold mb-4 text-lg">Support</h4>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Help Center</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Contact Us</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Privacy Policy</a></li>
+            <li><a href="server-status.html" class="text-gray-300 hover:text-white transition-colors">Server Status</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center">
+        <p class="text-gray-300">© 2023 Victor - Connect for Tasks. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Check if user is logged in
+      checkLoginStatus();
+      
+      // Setup file upload
+      setupFileUpload();
+      
+      // Setup rich text editor
+      setupRichTextEditor();
+      
+      // Setup preview modal
+      setupPreviewModal();
+      
+      // Form submission handler
+      document.getElementById('task-form').addEventListener('submit', handleFormSubmit);
+      
+      // Save draft button handler
+      document.getElementById('save-draft-button').addEventListener('click', saveDraft);
+      
+      // Mobile menu toggle
+      document.getElementById('mobile-menu-button').addEventListener('click', function() {
+        document.getElementById('mobile-menu').classList.toggle('hidden');
+      });
+      
+      // Load draft if available
+      loadSavedDraft();
+      
+      // Setup unsaved changes warning
+      setupUnsavedChangesWarning();
+      
+      // Setup form validation
+      setupFormValidation();
+    });
+
+    // Check login status and update UI
+    function checkLoginStatus() {
+      const token = localStorage.getItem('token');
+      const username = localStorage.getItem('username');
+      const userEmail = localStorage.getItem('userEmail');
+      const userId = localStorage.getItem('userId');
+      
+      const authButtons = document.getElementById('auth-buttons');
+      const userMenuContainer = document.getElementById('user-menu-container');
+      const mobileAuthLinks = document.getElementById('mobile-auth-links');
+      const mobileUserLinks = document.getElementById('mobile-user-links');
+      
+      if (token && userId) {
+        // User is logged in
+        if (authButtons) authButtons.classList.add('hidden');
+        if (userMenuContainer) userMenuContainer.classList.remove('hidden');
+        if (mobileAuthLinks) mobileAuthLinks.classList.add('hidden');
+        if (mobileUserLinks) mobileUserLinks.classList.remove('hidden');
+        
+        // Update user info
+        const usernameDisplay = document.getElementById('username-display');
+        const userNameDropdown = document.getElementById('user-name-dropdown');
+        const userEmailDropdown = document.getElementById('user-email-dropdown');
+        const userAvatar = document.getElementById('user-avatar');
+        
+        if (usernameDisplay && username) usernameDisplay.textContent = username;
+        if (userNameDropdown && username) userNameDropdown.textContent = username;
+        if (userEmailDropdown && userEmail) userEmailDropdown.textContent = userEmail;
+        if (userAvatar && username) userAvatar.textContent = username.charAt(0).toUpperCase();
+        
+        // Setup logout buttons
+        const logoutButton = document.getElementById('logout-button');
+        const mobileLogoutButton = document.getElementById('mobile-logout-button');
+        
+        if (logoutButton) {
+          logoutButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            logout();
+          });
+        }
+        
+        if (mobileLogoutButton) {
+          mobileLogoutButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            logout();
+          });
+        }
+      } else {
+        // User is not logged in - redirect to login page
+        window.location.href = 'login.html?redirect=post-task.html&message=Please login to post a task';
+      }
+      
+      // Setup user dropdown toggle
+      const userMenuButton = document.getElementById('user-menu-button');
+      const userDropdown = document.getElementById('user-dropdown');
+      
+      if (userMenuButton && userDropdown) {
+        userMenuButton.addEventListener('click', function() {
+          userDropdown.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+          if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
+            userDropdown.classList.add('hidden');
+          }
+        });
+      }
+    }
+
+    // Setup file upload
+    function setupFileUpload() {
+      const fileDropArea = document.getElementById('file-drop-area');
+      const fileInput = document.getElementById('file-input');
+      const previewContainer = document.getElementById('file-preview-container');
+      const files = [];
+      
+      // Open file dialog when clicking drop area
+      fileDropArea.addEventListener('click', function() {
+        fileInput.click();
+      });
+      
+      // Handle file selection
+      fileInput.addEventListener('change', function() {
+        handleFiles(this.files);
+      });
+      
+      // Handle drag and drop events
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        fileDropArea.addEventListener(eventName, preventDefaults, false);
+      });
+      
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      
+      // Highlight drop area when dragging over it
+      ['dragenter', 'dragover'].forEach(eventName => {
+        fileDropArea.addEventListener(eventName, highlight, false);
+      });
+      
+      ['dragleave', 'drop'].forEach(eventName => {
+        fileDropArea.addEventListener(eventName, unhighlight, false);
+      });
+      
+      function highlight() {
+        fileDropArea.classList.add('border-primary');
+      }
+      
+      function unhighlight() {
+        fileDropArea.classList.remove('border-primary');
+      }
+      
+      // Handle dropped files
+      fileDropArea.addEventListener('drop', function(e) {
+        const dt = e.dataTransfer;
+        const droppedFiles = dt.files;
+        handleFiles(droppedFiles);
+      });
+      
+      // Process files and show previews
+      function handleFiles(filesList) {
+        if (!filesList.length) return;
+        
+        for (let i = 0; i < filesList.length; i++) {
+          const file = filesList[i];
+          
+          // Validate file size (5MB max)
+          if (file.size > 5 * 1024 * 1024) {
+            showNotification(`File "${file.name}" exceeds the 5MB limit.`, 'error');
+            continue;
+          }
+          
+          files.push(file);
+          createFilePreview(file);
+        }
+        
+        if (files.length > 0) {
+          previewContainer.classList.remove('hidden');
+        }
+        
+        // Reset file input to allow selecting the same files again
+        fileInput.value = '';
+      }
+      
+      function createFilePreview(file) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+          const fileId = `file-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+          const fileDiv = document.createElement('div');
+          fileDiv.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200';
+          fileDiv.dataset.fileId = fileId;
+          
+          // Determine icon based on file type
+          let fileIcon = 'fa-file';
+          if (file.type.startsWith('image/')) fileIcon = 'fa-file-image';
+          else if (file.type === 'application/pdf') fileIcon = 'fa-file-pdf';
+          else if (file.type.startsWith('text/')) fileIcon = 'fa-file-alt';
+          
+          fileDiv.innerHTML = `
+            <div class="flex items-center">
+              <div class="w-10 h-10 flex items-center justify-center bg-gray-200 rounded mr-3">
+                <i class="fas ${fileIcon} text-gray-600"></i>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-800">${file.name}</p>
+                <p class="text-xs text-gray-500">${formatFileSize(file.size)}</p>
+              </div>
+            </div>
+            <button type="button" class="text-gray-400 hover:text-red-500 ml-2" data-file-id="${fileId}">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          `;
+          
+          // Add remove button event listener
+          fileDiv.querySelector('button').addEventListener('click', function() {
+            const fileId = this.dataset.fileId;
+            const fileIndex = files.findIndex(f => f.name === file.name);
+            
+            if (fileIndex !== -1) {
+              files.splice(fileIndex, 1);
+            }
+            
+            fileDiv.remove();
+            
+            if (files.length === 0) {
+              previewContainer.classList.add('hidden');
+            }
+          });
+          
+          previewContainer.appendChild(fileDiv);
+        };
+        
+        reader.readAsDataURL(file);
+      }
+      
+      function formatFileSize(size) {
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let unitIndex = 0;
+        
+        while (size >= 1024 && unitIndex < units.length - 1) {
+          size /= 1024;
+          unitIndex++;
+        }
+        
+        return `${size.toFixed(1)} ${units[unitIndex]}`;
+      }
+    }
+
+    // Setup rich text editor
+    function setupRichTextEditor() {
+      const editor = document.getElementById('description-editor');
+      const hiddenInput = document.getElementById('description');
+      const toolbarButtons = document.querySelectorAll('[data-format]');
+      
+      // Load initial content if in hidden input
+      if (hiddenInput.value) {
+        editor.innerHTML = hiddenInput.value;
+      }
+      
+      toolbarButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          const format = this.dataset.format;
+          document.execCommand(format, false, null);
+          editor.focus(); // Return focus to editor after clicking button
+        });
+      });
+      
+      editor.addEventListener('input', function() {
+        hiddenInput.value = editor.innerHTML;
+      });
+      
+      // Add keyboard shortcuts for formatting
+      editor.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+          switch(e.key) {
+            case 'b':
+              e.preventDefault();
+              document.execCommand('bold', false, null);
+              break;
+            case 'i':
+              e.preventDefault();
+              document.execCommand('italic', false, null);
+              break;
+            case 'u':
+              e.preventDefault();
+              document.execCommand('underline', false, null);
+              break;
+          }
+        }
+      });
+    }
+
+    // Setup preview modal
+    function setupPreviewModal() {
+      const previewButton = document.getElementById('preview-button');
+      const previewModal = document.getElementById('preview-modal');
+      const closePreviewButton = document.getElementById('close-preview');
+      const previewContent = document.getElementById('preview-content');
+      const previewEditButton = document.getElementById('preview-edit-button');
+      const previewPublishButton = document.getElementById('preview-publish-button');
+      
+      previewButton.addEventListener('click', function() {
+        const formData = new FormData(document.getElementById('task-form'));
+        previewContent.innerHTML = `
+          <div>
+            <h4 class="font-bold text-lg mb-2">Task Title</h4>
+            <p>${formData.get('title')}</p>
+          </div>
+          <div>
+            <h4 class="font-bold text-lg mb-2">Task Description</h4>
+            <div>${formData.get('description')}</div>
+          </div>
+          <div>
+            <h4 class="font-bold text-lg mb-2">Category</h4>
+            <p>${formData.get('category')}</p>
+          </div>
+          <div>
+            <h4 class="font-bold text-lg mb-2">Location</h4>
+            <p>${formData.get('location')}</p>
+          </div>
+          <div>
+            <h4 class="font-bold text-lg mb-2">Budget</h4>
+            <p>${formData.get('budget') ? `₹${formData.get('budget')}` : 'Negotiable'}</p>
+          </div>
+          <div>
+            <h4 class="font-bold text-lg mb-2">Deadline</h4>
+            <p>${formData.get('deadline') || 'No deadline'}</p>
+          </div>
+        `;
+        
+        previewModal.classList.remove('hidden');
+      });
+      
+      closePreviewButton.addEventListener('click', function() {
+        previewModal.classList.add('hidden');
+      });
+      
+      previewEditButton.addEventListener('click', function() {
+        previewModal.classList.add('hidden');
+      });
+      
+      previewPublishButton.addEventListener('click', function() {
+        document.getElementById('task-form').submit();
+      });
+    }
+
+    // Handle form submission
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      
+      const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        window.location.href = 'login.html?redirect=post-task.html&message=Please login to post a task';
+        return;
+      }
+      
+      // Validate form
+      const title = document.getElementById('title').value.trim();
+      const description = document.getElementById('description').value.trim();
+      
+      if (!title) {
+        showNotification('Please enter a task title', 'error');
+        return;
+      }
+      
+      if (!description) {
+        showNotification('Please enter a task description', 'error');
+        return;
+      }
+      
+      // Disable submit button
+      const submitBtn = document.getElementById('submit-button');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Posting...';
+      
+      // Collect form data
+      const formData = new FormData(document.getElementById('task-form'));
+      const taskData = {
+        title: formData.get('title'),
+        description: formData.get('description'),
+        category: formData.get('category'),
+        location: formData.get('location'),
+        budget: formData.get('budget'),
+        deadline: formData.get('deadline'),
+        private: formData.get('private-task') === 'on'
+      };
+      
+      try {
+        // Send task data to server
+        const response = await fetch(`${API_URL}/api/tasks`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(taskData)
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to post task');
+        }
+        
+        showNotification('Task posted successfully!', 'success');
+        
+        // Redirect to tasks page after a short delay
+        setTimeout(() => {
+          window.location.href = 'dashboard.html';
+        }, 1500);
+      } catch (error) {
+        showNotification(error.message || 'An error occurred while posting the task', 'error');
+        console.error('Error:', error);
+      } finally {
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
+    }
+
+    // Save draft
+    function saveDraft() {
+      const formData = new FormData(document.getElementById('task-form'));
+      const draftData = {
+        title: formData.get('title'),
+        description: document.getElementById('description-editor').innerHTML, // Get actual HTML content
+        category: formData.get('category'),
+        location: formData.get('location'),
+        budget: formData.get('budget'),
+        deadline: formData.get('deadline'),
+        privateTask: formData.get('private-task') === 'on',
+        savedAt: new Date().toISOString()
+      };
+      
+      // Save draft data to local storage
+      localStorage.setItem('taskDraft', JSON.stringify(draftData));
+      showNotification('Draft saved successfully!', 'success');
+    }
+    
+    // Load saved draft
+    function loadSavedDraft() {
+      try {
+        const savedDraft = localStorage.getItem('taskDraft');
+        
+        if (!savedDraft) return;
+        
+        const draftData = JSON.parse(savedDraft);
+        const savedTime = new Date(draftData.savedAt);
+        const now = new Date();
+        const hoursSinceSaved = Math.round((now - savedTime) / (1000 * 60 * 60));
+        
+        // Show draft recovery prompt
+        const draftPrompt = document.createElement('div');
+        draftPrompt.className = 'bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 mx-auto max-w-3xl flex items-center justify-between';
+        draftPrompt.innerHTML = `
+          <div>
+            <p class="font-medium text-blue-800">You have a saved draft from ${hoursSinceSaved} hour${hoursSinceSaved !== 1 ? 's' : ''} ago</p>
+            <p class="text-sm text-blue-600">Would you like to restore it?</p>
+          </div>
+          <div class="flex space-x-2">
+            <button type="button" class="text-blue-700 bg-blue-100 hover:bg-blue-200 px-3 py-1 rounded text-sm" id="restore-draft-btn">
+              Restore
+            </button>
+            <button type="button" class="text-gray-600 hover:text-gray-800 px-3 py-1 rounded text-sm" id="discard-draft-btn">
+              Discard
+            </button>
+          </div>
+        `;
+        
+        // Insert at the top of the form
+        const formElement = document.getElementById('task-form');
+        formElement.parentNode.insertBefore(draftPrompt, formElement);
+        
+        // Add event listeners
+        document.getElementById('restore-draft-btn').addEventListener('click', function() {
+          // Populate form fields
+          document.getElementById('title').value = draftData.title || '';
+          document.getElementById('description-editor').innerHTML = draftData.description || '';
+          document.getElementById('description').value = draftData.description || '';
+          
+          if (draftData.category) {
+            const categorySelect = document.getElementById('category');
+            for (let i = 0; i < categorySelect.options.length; i++) {
+              if (categorySelect.options[i].value === draftData.category) {
+                categorySelect.selectedIndex = i;
+                break;
+              }
+            }
+          }
+          
+          document.getElementById('location').value = draftData.location || '';
+          document.getElementById('budget').value = draftData.budget || '';
+          document.getElementById('deadline').value = draftData.deadline || '';
+          document.getElementById('private-task').checked = draftData.privateTask || false;
+          
+          // Remove the prompt
+          draftPrompt.remove();
+          
+          showNotification('Draft restored successfully!', 'success');
+        });
+        
+        document.getElementById('discard-draft-btn').addEventListener('click', function() {
+          localStorage.removeItem('taskDraft');
+          draftPrompt.remove();
+          showNotification('Draft discarded', 'info');
+        });
+      } catch (error) {
+        console.error('Error loading draft:', error);
+        // If there's an error parsing the draft, remove it
+        localStorage.removeItem('taskDraft');
+      }
+    }
+    
+    // Setup warning for unsaved changes
+    function setupUnsavedChangesWarning() {
+      let formChanged = false;
+      
+      // Track form changes
+      const form = document.getElementById('task-form');
+      const formElements = form.querySelectorAll('input, textarea, select');
+      
+      formElements.forEach(element => {
+        element.addEventListener('change', () => {
+          formChanged = true;
+        });
+      });
+      
+      document.getElementById('description-editor').addEventListener('input', () => {
+        formChanged = true;
+      });
+      
+      // Show warning when navigating away with unsaved changes
+      window.addEventListener('beforeunload', (e) => {
+        if (formChanged) {
+          e.preventDefault();
+          e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        }
+      });
+      
+      // Reset form changed state on submission and save draft
+      form.addEventListener('submit', () => {
+        formChanged = false;
+      });
+      
+      document.getElementById('save-draft-button').addEventListener('click', () => {
+        formChanged = false;
+      });
+    }
+    
+    // Setup form validation
+    function setupFormValidation() {
+      const form = document.getElementById('task-form');
+      const titleInput = document.getElementById('title');
+      const descriptionEditor = document.getElementById('description-editor');
+      const categorySelect = document.getElementById('category');
+      const locationInput = document.getElementById('location');
+      
+      form.addEventListener('submit', (e) => {
+        // Reset previous validation states
+        clearValidationErrors();
+        
+        let isValid = true;
+        
+        // Validate title (required, max 75 chars)
+        if (!titleInput.value.trim()) {
+          showValidationError(titleInput, 'Please enter a task title');
+          isValid = false;
+        } else if (titleInput.value.length > 75) {
+          showValidationError(titleInput, 'Title must be 75 characters or less');
+          isValid = false;
+        }
+        
+        // Validate description (required, min 30 chars)
+        const description = descriptionEditor.textContent.trim();
+        if (!description) {
+          showValidationError(descriptionEditor, 'Please enter a task description');
+          isValid = false;
+        } else if (description.length < 30) {
+          showValidationError(descriptionEditor, 'Description should be at least 30 characters');
+          isValid = false;
+        }
+        
+        // Validate category (required)
+        if (!categorySelect.value) {
+          showValidationError(categorySelect, 'Please select a category');
+          isValid = false;
+        }
+        
+        // Validate location (required)
+        if (!locationInput.value.trim()) {
+          showValidationError(locationInput, 'Please enter a location or "Remote"');
+          isValid = false;
+        }
+        
+        if (!isValid) {
+          e.preventDefault();
+          showNotification('Please fix the errors in the form', 'error');
+          
+          // Scroll to first error
+          const firstError = document.querySelector('.error-message');
+          if (firstError) {
+            firstError.parentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      });
+    }
+    
+    // Show validation error message
+    function showValidationError(element, message) {
+      const errorSpan = document.createElement('p');
+      errorSpan.className = 'text-red-500 text-xs mt-1 error-message';
+      errorSpan.textContent = message;
+      
+      // Add error class to the input
+      element.classList.add('border-red-500');
+      element.classList.add('bg-red-50');
+      
+      // Add error message after the element
+      element.parentNode.appendChild(errorSpan);
+    }
+    
+    // Clear all validation errors
+    function clearValidationErrors() {
+      // Remove error messages
+      const errorMessages = document.querySelectorAll('.error-message');
+      errorMessages.forEach(error => error.remove());
+      
+      // Remove error styling from inputs
+      const errorInputs = document.querySelectorAll('input.border-red-500, textarea.border-red-500, select.border-red-500, div.border-red-500');
+      errorInputs.forEach(input => {
+        input.classList.remove('border-red-500');
+        input.classList.remove('bg-red-50');
+      });
+    }
+
+    // Show notification
+    function showNotification(message, type) {
+      // Use notification.js if available
+      if (typeof window.showNotification === 'function') {
+        window.showNotification(message, type);
+        return;
+      }
+      
+      // Fallback notification implementation
+      const notification = document.createElement('div');
+      notification.className = `fixed bottom-4 right-4 p-4 rounded-lg shadow-lg text-white transform transition-all duration-300 ease-out translate-y-10 opacity-0 z-50 ${
+        type === 'success' ? 'bg-green-500' : 
+        type === 'error' ? 'bg-red-500' : 
+        type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+      }`;
+      notification.innerHTML = `
+        <div class="flex items-center">
+          <div class="mr-3">
+            <i class="fas ${
+              type === 'success' ? 'fa-check-circle' : 
+              type === 'error' ? 'fa-exclamation-circle' : 
+              type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'
+            }"></i>
+          </div>
+          <div>${message}</div>
+        </div>
+      `;
+      
+      document.body.appendChild(notification);
+      
+      // Animate in
+      setTimeout(() => {
+        notification.classList.remove('translate-y-10');
+        notification.classList.remove('opacity-0');
+      }, 10);
+      
+      setTimeout(() => {
+        notification.classList.add('opacity-0');
+        notification.classList.add('translate-y-10');
+        setTimeout(() => {
+          notification.remove();
+        }, 300);
+      }, 4000);
+    }
+    
+    // Logout function
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userEmail');
+      
+      window.location.href = 'login.html';
+    }
+  </script>
+</body>
+</html>

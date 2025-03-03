@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Details - Victor</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Config script -->
+  <script src="js/config.js"></script>
+  <script src="js/notification.js"></script>
+  <script src="js/task-utils.js"></script>
+  <!-- Configure Tailwind -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              DEFAULT: '#1a73e8',
+              dark: '#1557b0',
+              light: '#e8f0fe',
+            },
+            secondary: '#5f6368',
+            success: '#0d904f',
+            warning: '#f9ab00',
+            danger: '#d93025',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .animate-fadeIn {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .animate-delay-1 { animation-delay: 0.1s; }
+    .animate-delay-2 { animation-delay: 0.2s; }
+    .animate-delay-3 { animation-delay: 0.3s; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+  <!-- Header -->
+  <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-50">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between py-3">
+        <a class="text-primary font-bold text-2xl flex items-center" href="index.html">
+          <span class="bg-gradient-to-r from-primary to-blue-600 text-white p-1.5 rounded mr-1.5 flex items-center justify-center w-8 h-8">V</span>ictor
+        </a>
+        
+        <!-- Search bar - desktop -->
+        <div class="hidden md:flex flex-grow max-w-xl mx-8">
+          <div class="relative w-full">
+            <input type="text" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-search text-gray-400"></i>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Mobile menu button -->
+        <button class="md:hidden text-gray-600 focus:outline-none" id="mobile-menu-button">
+          <i class="fas fa-bars text-xl"></i>
+        </button>
+        
+        <!-- Desktop nav menu -->
+        <nav class="hidden md:flex items-center space-x-1">
+          <a href="index.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Home</a>
+          <a href="tasks.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Browse Tasks</a>
+          <a href="post-task.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Post a Task</a>
+          
+          <!-- Notifications dropdown -->
+          <div class="relative">
+            <button class="p-2 text-gray-600 hover:text-primary rounded-full hover:bg-gray-100 relative" id="notifications-button">
+              <i class="fas fa-bell"></i>
+              <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full" id="notifications-count">0</span>
+            </button>
+            <div class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg py-1 z-10 hidden border border-gray-100" id="notifications-dropdown">
+              <div class="px-4 py-3 border-b border-gray-100">
+                <h3 class="font-semibold text-gray-900">Notifications</h3>
+              </div>
+              <div class="max-h-64 overflow-y-auto" id="notifications-container">
+                <div class="text-center py-4 text-gray-500">No notifications yet</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- User dropdown -->
+          <div class="relative" id="user-menu-container">
+            <button class="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-full transition-colors" id="user-menu-button">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-400 to-blue-500 text-white flex items-center justify-center font-bold mr-2" id="user-avatar">V</div>
+              <span class="font-medium mr-1" id="username-display">User</span>
+              <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+            </button>
+            <div class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-1 z-10 hidden border border-gray-100" id="user-dropdown">
+              <div class="px-4 py-3 border-b border-gray-100">
+                <p class="text-sm font-medium text-gray-900" id="user-name-dropdown">User</p>
+                <p class="text-sm text-gray-500 truncate" id="user-email-dropdown">user@example.com</p>
+              </div>
+              <a href="dashboard.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-tachometer-alt w-5 text-gray-400 mr-2"></i> Dashboard
+              </a>
+              <a href="profile.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-user-circle w-5 text-gray-400 mr-2"></i> My Profile
+              </a>
+              <a href="accepted-tasks.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-check-circle w-5 text-gray-400 mr-2"></i> Tasks I'm Working On
+              </a>
+              <div class="border-t border-gray-100 my-1"></div>
+              <a href="#" id="logout-button" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-sign-out-alt w-5 text-gray-400 mr-2"></i> Logout
+              </a>
+            </div>
+          </div>
+          
+          <!-- Login/Signup options (visible when logged out) -->
+          <div class="flex items-center space-x-2" id="auth-buttons">
+            <a class="px-4 py-2 text-gray-700 font-medium hover:text-primary transition-colors" href="login.html" id="login-menu-item">
+              Log In
+            </a>
+            <a class="px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors" href="signup.html" id="signup-menu-item">
+              Sign Up
+            </a>
+          </div>
+        </nav>
+      </div>
+    </div>
+    
+    <!-- Mobile menu (hidden by default) -->
+    <div class="md:hidden bg-white border-t border-gray-100 px-4 py-2 hidden" id="mobile-menu">
+      <!-- Mobile search -->
+      <div class="relative mb-4">
+        <input type="text" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <i class="fas fa-search text-gray-400"></i>
+        </div>
+      </div>
+      
+      <div class="flex flex-col space-y-1">
+        <a href="index.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Home</a>
+        <a href="tasks.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Browse Tasks</a>
+        <a href="post-task.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Post a Task</a>
+        <div class="border-t border-gray-100 my-1 pt-1" id="mobile-auth-links">
+          <a href="login.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Log In</a>
+          <a href="signup.html" class="px-2 py-2 text-primary font-medium">Create an Account</a>
+        </div>
+        <div id="mobile-user-links" class="hidden">
+          <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="dashboard.html">
+            <i class="fas fa-tachometer-alt w-5 mr-2 text-gray-400"></i> Dashboard
+          </a>
+          <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="profile.html">
+            <i class="fas fa-user w-5 mr-2 text-gray-400"></i> My Profile
+          </a>
+          <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="accepted-tasks.html">
+            <i class="fas fa-check-circle w-5 mr-2 text-gray-400"></i> Tasks I'm Working On
+          </a>
+          <div class="border-t border-gray-100 my-1"></div>
+          <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="#" id="mobile-logout-button">
+            <i class="fas fa-sign-out-alt w-5 mr-2 text-gray-400"></i> Logout
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="pt-16 pb-12">
+    <div class="container mx-auto px-4">
+      <!-- Back button -->
+      <div class="pt-6 mb-4">
+        <a href="tasks.html" class="inline-flex items-center text-gray-600 hover:text-primary">
+          <i class="fas fa-arrow-left mr-2"></i> Back to Tasks
+        </a>
+      </div>
+      
+      <!-- Loading state -->
+      <div id="loading-container" class="text-center py-12">
+        <div class="inline-block w-12 h-12 border-4 border-gray-200 border-t-primary rounded-full animate-spin mb-4"></div>
+        <p class="text-gray-500">Loading task details...</p>
+      </div>
+      
+      <!-- Error state (hidden by default) -->
+      <div id="error-container" class="bg-red-50 rounded-xl shadow-sm p-12 text-center hidden">
+        <div class="inline-block p-6 rounded-full bg-red-100 mb-4">
+          <i class="fas fa-exclamation-triangle text-red-500 text-4xl"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-2">Task not found</h3>
+        <p class="text-gray-600 mb-6 max-w-md mx-auto">We couldn't find the task you're looking for. It may have been deleted or the link may be incorrect.</p>
+        <a href="tasks.html" class="bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-lg inline-flex items-center">
+          <i class="fas fa-list mr-2"></i>Browse Available Tasks
+        </a>
+      </div>
+      
+      <!-- Task details -->
+      <div id="task-details" class="hidden animate-fadeIn">
+        <div class="flex flex-col lg:flex-row gap-6">
+          <!-- Main content -->
+          <div class="lg:w-2/3">
+            <!-- Task header -->
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                <h1 class="text-2xl font-bold text-gray-900 mb-2 sm:mb-0" id="task-title">Task Title</h1>
+                <div class="flex items-center">
+                  <span id="task-status" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-50 text-green-600">
+                    <i class="fas fa-circle text-xs mr-1.5"></i>Open
+                  </span>
+                </div>
+              </div>
+              
+              <div class="flex flex-wrap gap-4 text-sm text-gray-500 mb-6">
+                <div class="flex items-center">
+                  <i class="fas fa-calendar-alt mr-2 opacity-70"></i>
+                  <span>Posted <span id="task-posted-date">Recently</span></span>
+                </div>
+                <div class="flex items-center">
+                  <i class="fas fa-tag mr-2 opacity-70"></i>
+                  <span id="task-category">Category</span>
+                </div>
+                <div class="flex items-center">
+                  <i class="fas fa-map-marker-alt mr-2 opacity-70"></i>
+                  <span id="task-location">Location</span>
+                </div>
+                <div class="flex items-center">
+                  <i class="fas fa-rupee-sign mr-2 opacity-70"></i>
+                  <span id="task-budget">Budget</span>
+                </div>
+              </div>
+              
+              <div class="prose max-w-none">
+                <h2 class="text-xl font-semibold mb-4">Description</h2>
+                <div id="task-description" class="text-gray-700"></div>
+              </div>
+              
+              <!-- Attachments if any -->
+              <div id="task-attachments-container" class="mt-6 pt-6 border-t border-gray-100 hidden">
+                <h2 class="text-xl font-semibold mb-4">Attachments</h2>
+                <div id="task-attachments" class="flex flex-wrap gap-3"></div>
+              </div>
+            </div>
+            
+            <!-- Task actions -->
+            <div id="task-actions" class="bg-white rounded-xl shadow-sm p-6 mb-6"></div>
+            
+            <!-- Offers section (if any) - Simplified -->
+            <div id="offers-container" class="bg-white rounded-xl shadow-sm p-6 mb-6 hidden">
+              <h2 class="text-xl font-semibold mb-4">Offers</h2>
+              <div id="offers-list" class="space-y-4">
+                <!-- Offers will be inserted here -->
+              </div>
+              
+              <!-- No offers state -->
+              <div id="no-offers" class="text-center py-8 hidden">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+                  <i class="fas fa-handshake text-gray-400 text-2xl"></i>
+                </div>
+                <p class="text-gray-500 mb-4">No offers yet</p>
+                <p class="text-sm text-gray-500">Be the first to make an offer for this task</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Sidebar content -->
+          <div class="lg:w-1/3">
+            <!-- Task interested container - Redesigned with prominent buttons -->
+            <div id="task-interested-container" class="bg-white rounded-xl shadow-sm p-6 mb-6 hidden">
+              <h3 class="text-lg font-semibold mb-4">I'm Interested</h3>
+              
+              <button id="make-offer-btn" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg inline-flex items-center justify-center mb-4 font-medium text-base shadow-sm">
+                <i class="fas fa-handshake mr-2"></i> Make an Offer
+              </button>
+              
+              <div class="grid grid-cols-2 gap-3">
+                <button id="contact-poster-btn" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-lg inline-flex items-center justify-center">
+                  <i class="fas fa-comment mr-2"></i> Message
+                </button>
+                
+                <button id="call-poster-btn" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-lg inline-flex items-center justify-center">
+                  <i class="fas fa-phone-alt mr-2"></i> Call
+                </button>
+              </div>
+              
+              <button id="save-task-btn" class="w-full border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg inline-flex items-center justify-center mt-3">
+                <i class="far fa-bookmark mr-2"></i> Save Task
+              </button>
+            </div>
+            
+            <!-- Task poster info -->
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+              <h3 class="text-lg font-semibold mb-4">About the Poster</h3>
+              <div class="flex items-center mb-4">
+                <div id="poster-avatar" class="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 mr-3">
+                  <i class="fas fa-user text-2xl"></i>
+                </div>
+                <div>
+                  <p class="font-medium" id="poster-name">Task Poster</p>
+                  <p class="text-gray-500 text-sm" id="poster-joined">Member since</p>
+                </div>
+              </div>
+              <div class="flex items-center text-sm mb-1">
+                <i class="fas fa-star text-yellow-400 mr-1"></i> 
+                <span id="poster-rating">0</span>
+                <span class="text-gray-500 ml-1" id="poster-reviews">(0 reviews)</span>
+              </div>
+              <div class="flex items-center text-sm text-gray-500 mb-2">
+                <i class="fas fa-check-circle text-green-500 mr-1"></i>
+                <span id="poster-completed">0 tasks completed</span>
+              </div>
+            </div>
+            
+            <!-- Task summary -->
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+              <h3 class="text-lg font-semibold mb-4">Task Summary</h3>
+              <div class="space-y-3">
+                <div class="flex items-start">
+                  <i class="fas fa-calendar-alt mt-1 mr-3 text-gray-400 w-5 text-center"></i>
+                  <div>
+                    <p class="text-sm font-medium text-gray-700">Posted On</p>
+                    <p class="text-sm text-gray-500" id="summary-posted-date">Recently</p>
+                  </div>
+                </div>
+                
+                <div class="flex items-start">
+                  <i class="fas fa-clock mt-1 mr-3 text-gray-400 w-5 text-center"></i>
+                  <div>
+                    <p class="text-sm font-medium text-gray-700">Deadline</p>
+                    <p class="text-sm text-gray-500" id="summary-deadline">No deadline set</p>
+                  </div>
+                </div>
+                
+                <div class="flex items-start">
+                  <i class="fas fa-map-marker-alt mt-1 mr-3 text-gray-400 w-5 text-center"></i>
+                  <div>
+                    <p class="text-sm font-medium text-gray-700">Location</p>
+                    <p class="text-sm text-gray-500" id="summary-location">Location</p>
+                  </div>
+                </div>
+                
+                <div class="flex items-start">
+                  <i class="fas fa-tag mt-1 mr-3 text-gray-400 w-5 text-center"></i>
+                  <div>
+                    <p class="text-sm font-medium text-gray-700">Category</p>
+                    <p class="text-sm text-gray-500" id="summary-category">Category</p>
+                  </div>
+                </div>
+                
+                <div class="flex items-start">
+                  <i class="fas fa-rupee-sign mt-1 mr-3 text-gray-400 w-5 text-center"></i>
+                  <div>
+                    <p class="text-sm font-medium text-gray-700">Budget</p>
+                    <p class="text-sm text-gray-500" id="summary-budget">Budget</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Similar tasks -->
+            <div class="bg-white rounded-xl shadow-sm p-6 overflow-hidden">
+              <h3 class="text-lg font-semibold mb-4">Similar Tasks</h3>
+              
+              <!-- Similar tasks loading -->
+              <div id="similar-tasks-loading" class="py-4">
+                <div class="flex items-center animate-pulse mb-4">
+                  <div class="w-12 h-12 bg-gray-200 rounded-lg mr-3"></div>
+                  <div class="flex-1">
+                    <div class="h-4 w-3/4 bg-gray-200 rounded mb-2"></div>
+                    <div class="h-3 w-1/2 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
+                <div class="flex items-center animate-pulse mb-4">
+                  <div class="w-12 h-12 bg-gray-200 rounded-lg mr-3"></div>
+                  <div class="flex-1">
+                    <div class="h-4 w-3/4 bg-gray-200 rounded mb-2"></div>
+                    <div class="h-3 w-1/2 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
+                <div class="flex items-center animate-pulse">
+                  <div class="w-12 h-12 bg-gray-200 rounded-lg mr-3"></div>
+                  <div class="flex-1">
+                    <div class="h-4 w-3/4 bg-gray-200 rounded mb-2"></div>
+                    <div class="h-3 w-1/2 bg-gray-200 rounded"></div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Similar tasks list -->
+              <div id="similar-tasks-list" class="space-y-4 hidden"></div>
+              
+              <!-- No similar tasks -->
+              <div id="no-similar-tasks" class="text-center py-6 hidden">
+                <p class="text-gray-500">No similar tasks found</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  
+  <!-- Make offer modal -->
+  <div id="offer-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-50" id="offer-modal-overlay"></div>
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 z-10">
+      <div class="p-6">
+        <h3 class="text-xl font-bold mb-6">Make an Offer</h3>
+        <form id="offer-form">
+          <div class="mb-4">
+            <label for="offer-amount" class="block text-sm font-medium text-gray-700 mb-1">Your Price (₹)</label>
+            <input type="number" id="offer-amount" min="1" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" required>
+          </div>
+          
+          <div class="mb-6">
+            <label for="offer-message" class="block text-sm font-medium text-gray-700 mb-1">Message to Task Poster</label>
+            <textarea id="offer-message" rows="4" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Describe why you're the right person for this task..." required></textarea>
+          </div>
+          
+          <div class="flex justify-end space-x-3">
+            <button type="button" id="close-offer-modal" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium">Submit Offer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Contact modal -->
+  <div id="contact-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-50" id="contact-modal-overlay"></div>
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 z-10">
+      <div class="p-6">
+        <h3 class="text-xl font-bold mb-6">Contact Task Poster</h3>
+        <form id="contact-form">
+          <div class="mb-6">
+            <label for="contact-message" class="block text-sm font-medium text-gray-700 mb-1">Your Message</label>
+            <textarea id="contact-message" rows="4" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Type your message here..." required></textarea>
+          </div>
+          
+          <div class="flex justify-end space-x-3">
+            <button type="button" id="close-contact-modal" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+            <button type="submit" class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg">Send Message</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Call modal -->
+  <div id="call-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-50" id="call-modal-overlay"></div>
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 z-10">
+      <div class="p-6">
+        <h3 class="text-xl font-bold mb-2">Call Task Poster</h3>
+        <p class="text-gray-600 mb-6">Would you like to call the task poster now?</p>
+        
+        <div id="call-poster-info" class="bg-gray-50 p-4 rounded-lg mb-6 flex items-center">
+          <div class="bg-blue-100 rounded-full p-3 mr-3">
+            <i class="fas fa-phone text-blue-600"></i>
+          </div>
+          <div>
+            <p class="font-medium" id="call-poster-name">Task Poster</p>
+            <p class="text-gray-500 text-sm" id="call-poster-phone">+91 9876543210</p>
+          </div>
+        </div>
+        
+        <div class="flex justify-end space-x-3">
+          <button type="button" id="close-call-modal" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+          <a href="tel:" id="call-phone-link" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg inline-flex items-center">
+            <i class="fas fa-phone-alt mr-2"></i> Call Now
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <footer class="bg-gray-800 text-white py-8">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-4 gap-8">
+        <div>
+          <a class="text-white font-bold text-2xl flex items-center mb-4" href="index.html">
+            <span class="bg-white text-primary p-1 rounded mr-1.5 flex items-center justify-center w-8 h-8">V</span>ictor
+          </a>
+          <p class="text-gray-300 mb-4">Connecting people for tasks - anytime, anywhere. Get help or help others.</p>
+          <div class="flex space-x-4">
+            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-twitter"></i></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-instagram"></i></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-linkedin-in"></i></a>
+          </div>
+        </div>
+        
+        <div>
+          <h4 class="font-semibold mb-4 text-lg">For Task Posters</h4>
+          <ul class="space-y-2">
+            <li><a href="post-task.html" class="text-gray-300 hover:text-white transition-colors">Post a Task</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">How it Works</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Pricing</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">FAQ</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 class="font-semibold mb-4 text-lg">For Task Performers</h4>
+          <ul class="space-y-2">
+            <li><a href="tasks.html" class="text-gray-300 hover:text-white transition-colors">Browse Tasks</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Task Categories</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Earn Money</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Success Stories</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 class="font-semibold mb-4 text-lg">Support</h4>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Help Center</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Contact Us</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Privacy Policy</a></li>
+            <li><a href="server-status.html" class="text-gray-300 hover:text-white transition-colors">Server Status</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center">
+        <p class="text-gray-300">© 2023 Victor - Connect for Tasks. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Get API URL from config
+      const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+      
+      // Mobile menu toggle
+      document.getElementById('mobile-menu-button').addEventListener('click', function() {
+        document.getElementById('mobile-menu').classList.toggle('hidden');
+      });
+      
+      // Check if user is logged in
+      checkLoginStatus();
+      
+      // Setup user dropdown toggle
+      setupUserDropdown();
+      
+      // Setup notifications dropdown toggle
+      setupNotificationsDropdown();
+      
+      // Get task ID from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const taskId = urlParams.get('id');
+      
+      if (!taskId) {
+        showErrorState("No task ID provided");
+        return;
+      }
+      
+      // Load task details
+      loadTaskDetails(taskId);
+      
+      // Setup modal functionality
+      setupModals();
+    });
+    
+    // Check login status and update UI accordingly
+    function checkLoginStatus() {
+      const token = localStorage.getItem('token');
+      const username = localStorage.getItem('username');
+      const userEmail = localStorage.getItem('userEmail');
+      const userId = localStorage.getItem('userId');
+      
+      const authButtons = document.getElementById('auth-buttons');
+      const userMenuContainer = document.getElementById('user-menu-container');
+      const mobileAuthLinks = document.getElementById('mobile-auth-links');
+      const mobileUserLinks = document.getElementById('mobile-user-links');
+      
+      if (token && userId) {
+        // User is logged in
+        if (authButtons) authButtons.classList.add('hidden');
+        if (userMenuContainer) userMenuContainer.classList.remove('hidden');
+        if (mobileAuthLinks) mobileAuthLinks.classList.add('hidden');
+        if (mobileUserLinks) mobileUserLinks.classList.remove('hidden');
+        
+        // Update user info
+        const usernameDisplay = document.getElementById('username-display');
+        const userNameDropdown = document.getElementById('user-name-dropdown');
+        const userEmailDropdown = document.getElementById('user-email-dropdown');
+        const userAvatar = document.getElementById('user-avatar');
+        
+        if (usernameDisplay && username) usernameDisplay.textContent = username;
+        if (userNameDropdown && username) userNameDropdown.textContent = username;
+        if (userEmailDropdown && userEmail) userEmailDropdown.textContent = userEmail;
+        if (userAvatar && username) userAvatar.textContent = username.charAt(0).toUpperCase();
+        
+        // Setup logout buttons
+        const logoutButton = document.getElementById('logout-button');
+        const mobileLogoutButton = document.getElementById('mobile-logout-button');
+        
+        if (logoutButton) {
+          logoutButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            logout();
+          });
+        }
+        
+        if (mobileLogoutButton) {
+          mobileLogoutButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            logout();
+          });
+        }
+      } else {
+        // User is not logged in
+        if (authButtons) authButtons.classList.remove('hidden');
+        if (userMenuContainer) userMenuContainer.classList.add('hidden');
+        if (mobileAuthLinks) mobileAuthLinks.classList.remove('hidden');
+        if (mobileUserLinks) mobileUserLinks.classList.add('hidden');
+      }
+      
+      return token && userId;
+    }
+    
+    // Setup user dropdown
+    function setupUserDropdown() {
+      const userMenuButton = document.getElementById('user-menu-button');
+      const userDropdown = document.getElementById('user-dropdown');
+      
+      if (userMenuButton && userDropdown) {
+        userMenuButton.addEventListener('click', function(e) {
+          e.stopPropagation();
+          userDropdown.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+          if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
+            userDropdown.classList.add('hidden');
+          }
+        });
+      }
+    }
+    
+    // Setup notifications dropdown
+    function setupNotificationsDropdown() {
+      const notificationsButton = document.getElementById('notifications-button');
+      const notificationsDropdown = document.getElementById('notifications-dropdown');
+      
+      if (notificationsButton && notificationsDropdown) {
+        notificationsButton.addEventListener('click', function(e) {
+          e.stopPropagation();
+          notificationsDropdown.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+          if (!notificationsButton.contains(event.target) && !notificationsDropdown.contains(event.target)) {
+            notificationsDropdown.classList.add('hidden');
+          }
+        });
+      }
+    }
+    
+    // Setup modals (Offer, Contact, Call)
+    function setupModals() {
+      // Offer modal
+      const offerModal = document.getElementById('offer-modal');
+      const offerBtn = document.getElementById('make-offer-btn');
+      const closeOfferModal = document.getElementById('close-offer-modal');
+      const offerModalOverlay = document.getElementById('offer-modal-overlay');
+      const offerForm = document.getElementById('offer-form');
+      
+      if (offerBtn) {
+        offerBtn.addEventListener('click', function() {
+          offerModal.classList.remove('hidden');
+        });
+      }
+      
+      if (closeOfferModal) {
+        closeOfferModal.addEventListener('click', function() {
+          offerModal.classList.add('hidden');
+        });
+      }
+      
+      if (offerModalOverlay) {
+        offerModalOverlay.addEventListener('click', function() {
+          offerModal.classList.add('hidden');
+        });
+      }
+      
+      if (offerForm) {
+        offerForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          submitOffer();
+        });
+      }
+      
+      // Contact modal
+      const contactModal = document.getElementById('contact-modal');
+      const contactBtn = document.getElementById('contact-poster-btn');
+      const closeContactModal = document.getElementById('close-contact-modal');
+      const contactModalOverlay = document.getElementById('contact-modal-overlay');
+      const contactForm = document.getElementById('contact-form');
+      
+      if (contactBtn) {
+        contactBtn.addEventListener('click', function() {
+          contactModal.classList.remove('hidden');
+        });
+      }
+      
+      if (closeContactModal) {
+        closeContactModal.addEventListener('click', function() {
+          contactModal.classList.add('hidden');
+        });
+      }
+      
+      if (contactModalOverlay) {
+        contactModalOverlay.addEventListener('click', function() {
+          contactModal.classList.add('hidden');
+        });
+      }
+      
+      if (contactForm) {
+        contactForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          submitContactForm();
+        });
+      }
+      
+      // Call modal
+      const callModal = document.getElementById('call-modal');
+      const callBtn = document.getElementById('call-poster-btn');
+      const closeCallModal = document.getElementById('close-call-modal');
+      const callModalOverlay = document.getElementById('call-modal-overlay');
+      
+      if (callBtn) {
+        callBtn.addEventListener('click', function() {
+          callModal.classList.remove('hidden');
+        });
+      }
+      
+      if (closeCallModal) {
+        closeCallModal.addEventListener('click', function() {
+          callModal.classList.add('hidden');
+        });
+      }
+      
+      if (callModalOverlay) {
+        callModalOverlay.addEventListener('click', function() {
+          callModal.classList.add('hidden');
+        });
+      }
+    }
+    
+    // Load task details from API
+    async function loadTaskDetails(taskId) {
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        
+        // Fetch task data
+        const response = await fetch(`${API_URL}/api/tasks/${taskId}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to load task: ${response.status}`);
+        }
+        
+        const task = await response.json();
+        
+        // Hide loading, show task details
+        document.getElementById('loading-container').classList.add('hidden');
+        document.getElementById('task-details').classList.remove('hidden');
+        
+        // Populate task details
+        populateTaskDetails(task);
+        
+        // Check if user is the task poster
+        const currentUserId = localStorage.getItem('userId');
+        const isTaskPoster = currentUserId && task.userId == currentUserId;
+        
+        // Show appropriate action buttons based on user role and task status
+        updateActionButtons(task, isTaskPoster);
+        
+        // Load similar tasks
+        loadSimilarTasks(task.category, taskId);
+        
+        // Load offers if user is the task poster
+        if (isTaskPoster) {
+          loadOffers(taskId);
+        }
+        
+      } catch (error) {
+        console.error('Error loading task details:', error);
+        showErrorState(error.message);
+      }
+    }
+    
+    // Populate task details in the UI
+    function populateTaskDetails(task) {
+      // Main task info
+      document.getElementById('task-title').textContent = task.title;
+      document.getElementById('task-description').innerHTML = task.description || 'No description provided';
+      document.getElementById('task-category').textContent = task.category || 'Uncategorized';
+      document.getElementById('task-location').textContent = task.location || 'Remote';
+      document.getElementById('task-budget').textContent = task.budget ? `₹${task.budget}` : 'Negotiable';
+      
+      // Status
+      const taskStatus = document.getElementById('task-status');
+      const statusClasses = {
+        'Open': 'bg-green-50 text-green-600',
+        'In Progress': 'bg-yellow-50 text-yellow-600',
+        'Completed': 'bg-gray-50 text-gray-600'
+      };
+      const statusIcons = {
+        'Open': 'fa-circle',
+        'In Progress': 'fa-spinner',
+        'Completed': 'fa-check-circle'
+      };
+      
+      taskStatus.className = `inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusClasses[task.status] || 'bg-gray-50 text-gray-600'}`;
+      taskStatus.innerHTML = `<i class="fas ${statusIcons[task.status] || 'fa-circle'} text-xs mr-1.5"></i>${task.status}`;
+      
+      // Dates
+      const postedDate = TaskUtils.formatDate(task.createdAt, true);
+      document.getElementById('task-posted-date').textContent = postedDate;
+      document.getElementById('summary-posted-date').textContent = postedDate;
+      
+      // Deadline
+      document.getElementById('summary-deadline').textContent = task.deadline ? TaskUtils.formatDate(task.deadline) : 'No deadline set';
+      
+      // Summary section
+      document.getElementById('summary-location').textContent = task.location || 'Remote';
+      document.getElementById('summary-category').textContent = task.category || 'Uncategorized';
+      document.getElementById('summary-budget').textContent = task.budget ? `₹${task.budget}` : 'Negotiable';
+      
+      // Task poster info
+      fetchUserDetails(task.userId);
+    }
+    
+    // Update action buttons based on user role and task status - More streamlined
+    function updateActionButtons(task, isTaskPoster) {
+      const taskActionsContainer = document.getElementById('task-actions');
+      const taskInterestedContainer = document.getElementById('task-interested-container');
+      
+      if (!taskActionsContainer) return;
+      
+      // Clear any existing content
+      taskActionsContainer.innerHTML = '';
+      
+      // User is the task poster
+      if (isTaskPoster) {
+        // Show different options based on task status
+        if (task.status === 'Open') {
+          taskActionsContainer.innerHTML = `
+            <h3 class="text-lg font-semibold mb-4">Manage Task</h3>
+            <div class="flex flex-wrap gap-3">
+              <button id="edit-task-btn" class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg inline-flex items-center">
+                <i class="fas fa-edit mr-2"></i> Edit Task
+              </button>
+              <button id="view-offers-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg inline-flex items-center">
+                <i class="fas fa-handshake mr-2"></i> View Offers
+              </button>
+              <button id="delete-task-btn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg inline-flex items-center">
+                <i class="fas fa-trash-alt mr-2"></i> Delete Task
+              </button>
+            </div>
+          `;
+          
+          // Add event listeners
+          document.getElementById('edit-task-btn').addEventListener('click', () => {
+            window.location.href = `edit-task.html?id=${task.id}`;
+          });
+          
+          document.getElementById('delete-task-btn').addEventListener('click', () => {
+            confirmDeleteTask(task.id);
+          });
+          
+          document.getElementById('view-offers-btn').addEventListener('click', () => {
+            toggleOffersVisibility();
+          });
+        } 
+        else if (task.status === 'In Progress') {
+          taskActionsContainer.innerHTML = `
+            <h3 class="text-lg font-semibold mb-4">Task Actions</h3>
+            <div class="flex flex-wrap gap-3">
+              <button id="mark-complete-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg inline-flex items-center">
+                <i class="fas fa-check-circle mr-2"></i> Mark as Complete
+              </button>
+              <button id="cancel-task-btn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg inline-flex items-center">
+                <i class="fas fa-times-circle mr-2"></i> Cancel Task
+              </button>
+            </div>
+          `;
+          
+          // Add event listeners
+          document.getElementById('mark-complete-btn').addEventListener('click', () => {
+            updateTaskStatus(task.id, 'Completed');
+          });
+          
+          document.getElementById('cancel-task-btn').addEventListener('click', () => {
+            confirmCancelTask(task.id);
+          });
+        }
+        else if (task.status === 'Completed') {
+          taskActionsContainer.innerHTML = `
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold">Task Completed</h3>
+              <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium flex items-center">
+                <i class="fas fa-check-circle mr-1"></i> Completed on ${TaskUtils.formatDate(task.completedAt || task.updatedAt)}
+              </span>
+            </div>
+            <p class="text-gray-600 mt-2">This task has been marked as completed. Thank you for using Victor!</p>
+            <div class="mt-4">
+              <button id="reopen-task-btn" class="text-primary hover:underline inline-flex items-center">
+                <i class="fas fa-redo mr-1"></i> Reopen Task
+              </button>
+            </div>
+          `;
+          
+          // Add event listener
+          document.getElementById('reopen-task-btn').addEventListener('click', () => {
+            updateTaskStatus(task.id, 'Open');
+          });
+        }
+        
+        // Hide the interested container for task posters
+        if (taskInterestedContainer) {
+          taskInterestedContainer.classList.add('hidden');
+        }
+      }
+      // User is not the task poster
+      else {
+        const isLoggedIn = checkLoginStatus();
+        
+        // For non-posters, hide the actions container
+        taskActionsContainer.classList.add('hidden');
+        
+        // Show the interested container if task is open and user is logged in
+        if (taskInterestedContainer && isLoggedIn && task.status === 'Open') {
+          taskInterestedContainer.classList.remove('hidden');
+        }
+      }
+    }
+    
+    // Fetch user details for the task poster
+    async function fetchUserDetails(userId) {
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        
+        // Fetch user data
+        const response = await fetch(`${API_URL}/api/users/${userId}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to load user details: ${response.status}`);
+        }
+        
+        const user = await response.json();
+        
+        // Update UI with user details
+        document.getElementById('poster-name').textContent = user.username || 'User';
+        
+        const joinedDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently';
+        document.getElementById('poster-joined').textContent = `Member since ${joinedDate}`;
+        
+        // Update ratings if available
+        if (user.rating) {
+          document.getElementById('poster-rating').textContent = user.rating.toFixed(1);
+          document.getElementById('poster-reviews').textContent = `(${user.reviewCount || 0} reviews)`;
+        }
+        
+        // Update tasks completed if available
+        if (user.completedTasks) {
+          document.getElementById('poster-completed').textContent = `${user.completedTasks} tasks completed`;
+        }
+        
+        // Update avatar if available
+        const posterAvatar = document.getElementById('poster-avatar');
+        if (posterAvatar) {
+          if (user.profileImage) {
+            posterAvatar.innerHTML = `<img src="${user.profileImage}" alt="${user.username}" class="w-full h-full object-cover rounded-full">`;
+          } else {
+            posterAvatar.innerHTML = `<span class="text-2xl font-bold">${(user.username || 'U').charAt(0).toUpperCase()}</span>`;
+            posterAvatar.classList.add('bg-gradient-to-tr', 'from-purple-400', 'to-blue-500', 'text-white');
+          }
+        }
+        
+      } catch (error) {
+        console.error('Error loading user details:', error);
+        // Don't show error state, just leave default values
+      }
+    }
+    
+    // Load similar tasks
+    async function loadSimilarTasks(category, currentTaskId) {
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        
+        // Fetch tasks with the same category
+        const response = await fetch(`${API_URL}/api/tasks?category=${encodeURIComponent(category)}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to load similar tasks: ${response.status}`);
+        }
+        
+        let tasks = await response.json();
+        
+        // Filter out the current task and keep only open tasks
+        tasks = tasks.filter(task => task.id != currentTaskId && task.status === 'Open');
+        
+        // Show up to 3 similar tasks
+        tasks = tasks.slice(0, 3);
+        
+        // Hide loading state
+        document.getElementById('similar-tasks-loading').classList.add('hidden');
+        
+        // Show empty state if no similar tasks
+        if (tasks.length === 0) {
+          document.getElementById('no-similar-tasks').classList.remove('hidden');
+          return;
+        }
+        
+        // Show similar tasks
+        const similarTasksList = document.getElementById('similar-tasks-list');
+        similarTasksList.classList.remove('hidden');
+        
+        // Create task list items
+        tasks.forEach(task => {
+          const taskItem = document.createElement('div');
+          taskItem.className = 'flex items-start hover:bg-gray-50 p-2 rounded-lg transition-colors';
+          
+          const formattedDate = TaskUtils.formatDate(task.createdAt, true);
+          
+          taskItem.innerHTML = `
+            <div class="mr-3 flex-shrink-0">
+              <div class="w-12 h-12 rounded bg-primary-light flex items-center justify-center">
+                <i class="fas fa-clipboard-list text-primary"></i>
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <a href="task-detail.html?id=${task.id}" class="text-sm font-medium line-clamp-1 hover:text-primary">${task.title}</a>
+              <p class="text-xs text-gray-500 mb-1">${formattedDate} • ${task.location || 'Remote'}</p>
+              <p class="text-xs text-gray-500 font-medium">${task.budget ? `₹${task.budget}` : 'Negotiable'}</p>
+            </div>
+          `;
+          
+          similarTasksList.appendChild(taskItem);
+        });
+        
+      } catch (error) {
+        console.error('Error loading similar tasks:', error);
+        
+        // Show error state
+        const similarTasksContainer = document.getElementById('similar-tasks-list');
+        if (similarTasksContainer) {
+          similarTasksContainer.innerHTML = `
+            <div class="text-center py-3">
+              <p class="text-gray-500">Failed to load similar tasks</p>
+            </div>
+          `;
+          similarTasksContainer.classList.remove('hidden');
+        }
+        document.getElementById('similar-tasks-loading').classList.add('hidden');
+      }
+    }
+    
+    // Load offers for the task (only for task poster)
+    async function loadOffers(taskId) {
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        if (!token) return;
+        
+        // Fetch offers data
+        const response = await fetch(`${API_URL}/api/tasks/${taskId}/offers`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to load offers: ${response.status}`);
+        }
+        
+        const offers = await response.json();
+        
+        const offersContainer = document.getElementById('offers-container');
+        const offersList = document.getElementById('offers-list');
+        const noOffers = document.getElementById('no-offers');
+        
+        if (!offersContainer || !offersList || !noOffers) return;
+        
+        // Show offers container
+        offersContainer.classList.remove('hidden');
+        
+        // Show empty state if no offers
+        if (!offers || offers.length === 0) {
+          offersList.classList.add('hidden');
+          noOffers.classList.remove('hidden');
+          return;
+        }
+        
+        // Show offers list
+        offersList.innerHTML = '';
+        noOffers.classList.add('hidden');
+        offersList.classList.remove('hidden');
+        
+        // Sort offers by date (newest first)
+        offers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
+        // Render offers
+        offers.forEach(offer => {
+          const offerElement = createOfferElement(offer, taskId);
+          offersList.appendChild(offerElement);
+        });
+        
+      } catch (error) {
+        console.error('Error loading offers:', error);
+      }
+    }
+    
+    // Create offer element - Simplified and focused on accept button
+    function createOfferElement(offer, taskId) {
+      const div = document.createElement('div');
+      div.className = 'bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow';
+      
+      const createdDate = TaskUtils.formatDate(offer.createdAt, true);
+      
+      div.innerHTML = `
+        <div class="flex items-start">
+          <div class="mr-3">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-400 to-indigo-500 text-white flex items-center justify-center font-bold">
+              ${offer.userUsername ? offer.userUsername.charAt(0).toUpperCase() : 'U'}
+            </div>
+          </div>
+          <div class="flex-1">
+            <div class="flex flex-wrap justify-between mb-2">
+              <div>
+                <span class="font-medium">${offer.userUsername || 'Anonymous'}</span>
+                <span class="text-gray-500 text-sm ml-2">offered ${createdDate}</span>
+              </div>
+              <div class="font-semibold text-green-600">₹${offer.amount}</div>
+            </div>
+            <p class="text-gray-700 mb-4">${offer.message}</p>
+            
+            <div class="flex flex-wrap gap-2 mt-2">
+              <button class="accept-offer-btn px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm inline-flex items-center font-medium shadow-sm" data-offer-id="${offer.id}">
+                <i class="fas fa-check-circle mr-1"></i> Accept Offer
+              </button>
+              <button class="message-user-btn px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm inline-flex items-center" data-user-id="${offer.userId}">
+                <i class="fas fa-comment mr-1"></i> Message
+              </button>
+              <button class="decline-offer-btn px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm inline-flex items-center" data-offer-id="${offer.id}">
+                <i class="fas fa-times-circle mr-1"></i> Decline
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Add event listeners
+      setTimeout(() => {
+        const acceptBtn = div.querySelector('.accept-offer-btn');
+        const declineBtn = div.querySelector('.decline-offer-btn');
+        const messageBtn = div.querySelector('.message-user-btn');
+        
+        if (acceptBtn) {
+          acceptBtn.addEventListener('click', function() {
+            const offerId = this.getAttribute('data-offer-id');
+            acceptOffer(taskId, offerId);
+          });
+        }
+        
+        if (declineBtn) {
+          declineBtn.addEventListener('click', function() {
+            const offerId = this.getAttribute('data-offer-id');
+            declineOffer(taskId, offerId);
+          });
+        }
+        
+        if (messageBtn) {
+          messageBtn.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            messageUser(userId);
+          });
+        }
+      }, 0);
+      
+      return div;
+    }
+    
+    // Accept an offer
+    async function acceptOffer(taskId, offerId) {
+      if (!confirm('Are you sure you want to accept this offer? This will assign the task to this user.')) {
+        return;
+      }
+      
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          alert('You must be logged in to accept offers.');
+          return;
+        }
+        
+        // Send accept request to server
+        const response = await fetch(`${API_URL}/api/tasks/${taskId}/offers/${offerId}/accept`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to accept offer');
+        }
+        
+        // Reload the page to reflect changes
+        window.location.reload();
+        
+      } catch (error) {
+        console.error('Error accepting offer:', error);
+        alert('Failed to accept offer. Please try again.');
+      }
+    }
+    
+    // Decline an offer
+    async function declineOffer(taskId, offerId) {
+      if (!confirm('Are you sure you want to decline this offer?')) {
+        return;
+      }
+      
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          alert('You must be logged in to decline offers.');
+          return;
+        }
+        
+        // Send decline request to server
+        const response = await fetch(`${API_URL}/api/tasks/${taskId}/offers/${offerId}/decline`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to decline offer');
+        }
+        
+        // Reload offers
+        loadOffers(taskId);
+        
+      } catch (error) {
+        console.error('Error declining offer:', error);
+        alert('Failed to decline offer. Please try again.');
+      }
+    }
+    
+    // Message a user
+    function messageUser(userId) {
+      // For now, just open the contact modal
+      document.getElementById('contact-modal').classList.remove('hidden');
+    }
+    
+    // Submit an offer
+    async function submitOffer() {
+      const amount = document.getElementById('offer-amount').value.trim();
+      const message = document.getElementById('offer-message').value.trim();
+      
+      if (!amount) {
+        alert('Please enter an offer amount.');
+        return;
+      }
+      
+      if (!message) {
+        alert('Please enter a message.');
+        return;
+      }
+      
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          alert('You must be logged in to make an offer.');
+          return;
+        }
+        
+        // Get task ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const taskId = urlParams.get('id');
+        
+        if (!taskId) {
+          throw new Error('Task ID not found');
+        }
+        
+        // Send offer to server
+        const response = await fetch(`${API_URL}/api/tasks/${taskId}/offers`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            amount: parseInt(amount),
+            message: message
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to submit offer');
+        }
+        
+        // Close modal
+        document.getElementById('offer-modal').classList.add('hidden');
+        
+        // Clear form
+        document.getElementById('offer-amount').value = '';
+        document.getElementById('offer-message').value = '';
+        
+        // Show success message
+        alert('Your offer has been submitted successfully!');
+        
+      } catch (error) {
+        console.error('Error submitting offer:', error);
+        alert('Failed to submit offer. Please try again.');
+      }
+    }
+    
+    // Submit contact form
+    async function submitContactForm() {
+      const message = document.getElementById('contact-message').value.trim();
+      
+      if (!message) {
+        alert('Please enter a message.');
+        return;
+      }
+      
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          alert('You must be logged in to contact the poster.');
+          return;
+        }
+        
+        // Get task ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const taskId = urlParams.get('id');
+        
+        if (!taskId) {
+          throw new Error('Task ID not found');
+        }
+        
+        // Send message to server
+        const response = await fetch(`${API_URL}/api/tasks/${taskId}/contact`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ message: message })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to send message');
+        }
+        
+        // Close modal
+        document.getElementById('contact-modal').classList.add('hidden');
+        
+        // Clear form
+        document.getElementById('contact-message').value = '';
+        
+        // Show success message
+        alert('Your message has been sent successfully!');
+        
+      } catch (error) {
+        console.error('Error submitting contact form:', error);
+        alert('Failed to send message. Please try again.');
+      }
+    }
+    
+    // Toggle visibility of offers section
+    function toggleOffersVisibility() {
+      const offersContainer = document.getElementById('offers-container');
+      
+      if (offersContainer) {
+        offersContainer.classList.toggle('hidden');
+        
+        // If now visible, make sure to update the offers list
+        if (!offersContainer.classList.contains('hidden')) {
+          // Get task ID from URL
+          const urlParams = new URLSearchParams(window.location.search);
+          const taskId = urlParams.get('id');
+          
+          if (taskId) {
+            loadOffers(taskId);
+          }
+        }
+      }
+    }
+    
+    // Show error state
+    function showErrorState(message) {
+      const loadingContainer = document.getElementById('loading-container');
+      const errorContainer = document.getElementById('error-container');
+      const taskDetails = document.getElementById('task-details');
+      
+      if (loadingContainer) loadingContainer.classList.add('hidden');
+      if (errorContainer) {
+        errorContainer.classList.remove('hidden');
+        const errorMessage = errorContainer.querySelector('p');
+        if (errorMessage && message) {
+          errorMessage.textContent = message;
+        }
+      }
+      if (taskDetails) taskDetails.classList.add('hidden');
+    }
+    
+    // Update task status
+    async function updateTaskStatus(taskId, newStatus) {
+      if (!confirm(`Are you sure you want to mark this task as ${newStatus}?`)) {
+        return;
+      }
+      
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          alert('You must be logged in to update task status.');
+          return;
+        }
+        
+        // Send update request to server
+        const response = await fetch(`${API_URL}/api/tasks/${taskId}/status`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to update task status');
+        }
+        
+        // Reload the page to reflect changes
+        window.location.reload();
+        
+      } catch (error) {
+        console.error('Error updating task status:', error);
+        alert('Failed to update task status. Please try again.');
+      }
+    }
+    
+    // Confirm task cancellation
+    function confirmCancelTask(taskId) {
+      if (confirm('Are you sure you want to cancel this task? This will revert it to Open status and remove the assigned user.')) {
+        updateTaskStatus(taskId, 'Open');
+      }
+    }
+    
+    // Confirm task deletion
+    function confirmDeleteTask(taskId) {
+      if (confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+        deleteTask(taskId);
+      }
+    }
+    
+    // Delete task
+    async function deleteTask(taskId) {
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          alert('You must be logged in to delete tasks.');
+          return;
+        }
+        
+        // Send delete request to server
+        const response = await fetch(`${API_URL}/api/tasks/${taskId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to delete task');
+        }
+        
+        // Redirect to dashboard
+        alert('Task deleted successfully!');
+        window.location.href = 'dashboard.html';
+        
+      } catch (error) {
+        console.error('Error deleting task:', error);
+        alert('Failed to delete task. Please try again.');
+      }
+    }
+    
+    // Logout function
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userEmail');
+      
+      window.location.href = 'login.html';
+    }
+  </script>
+</body>
+</html>

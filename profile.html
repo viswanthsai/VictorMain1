@@ -1,0 +1,1921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile - Victor</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Config script -->
+  <script src="js/config.js"></script>
+  <script src="js/notification.js"></script>
+  <script src="js/task-utils.js"></script>
+  <!-- Configure Tailwind -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              DEFAULT: '#1a73e8',
+              dark: '#1557b0',
+              light: '#e8f0fe',
+            },
+            secondary: '#5f6368',
+            success: '#0d904f',
+            warning: '#f9ab00',
+            danger: '#d93025',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans pt-16">
+  <!-- Header -->
+  <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-50">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between py-3">
+        <a class="text-primary font-bold text-2xl flex items-center" href="index.html">
+          <span class="bg-gradient-to-r from-primary to-blue-600 text-white p-1.5 rounded mr-1.5 flex items-center justify-center w-8 h-8">V</span>ictor
+        </a>
+        
+        <!-- Search bar - desktop -->
+        <div class="hidden md:flex flex-grow max-w-xl mx-8">
+          <div class="relative w-full">
+            <input type="text" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-search text-gray-400"></i>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Mobile menu button -->
+        <button class="md:hidden text-gray-600 focus:outline-none" id="mobile-menu-button">
+          <i class="fas fa-bars text-xl"></i>
+        </button>
+        
+        <!-- Desktop nav menu -->
+        <nav class="hidden md:flex items-center space-x-1">
+          <a href="index.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Home</a>
+          <a href="tasks.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Browse Tasks</a>
+          <a href="post-task.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Post a Task</a>
+          
+          <!-- Notifications dropdown -->
+          <div class="relative">
+            <button class="p-2 text-gray-600 hover:text-primary rounded-full hover:bg-gray-100 relative" id="notifications-button">
+              <i class="fas fa-bell"></i>
+              <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full" id="notifications-count">0</span>
+            </button>
+            <div class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg py-1 z-10 hidden border border-gray-100" id="notifications-dropdown">
+              <div class="px-4 py-3 border-b border-gray-100">
+                <h3 class="font-semibold text-gray-900">Notifications</h3>
+              </div>
+              <div class="max-h-64 overflow-y-auto" id="notifications-container">
+                <div class="text-center py-4 text-gray-500">No notifications yet</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- User dropdown -->
+          <div class="relative" id="user-menu-container">
+            <button class="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-full transition-colors" id="user-menu-button">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-400 to-blue-500 text-white flex items-center justify-center font-bold mr-2" id="user-avatar">V</div>
+              <span class="font-medium mr-1" id="username-display">User</span>
+              <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+            </button>
+            <div class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-1 z-10 hidden border border-gray-100" id="user-dropdown">
+              <div class="px-4 py-3 border-b border-gray-100">
+                <p class="text-sm font-medium text-gray-900" id="user-name-dropdown">User</p>
+                <p class="text-sm text-gray-500 truncate" id="user-email-dropdown">user@example.com</p>
+              </div>
+              <a href="dashboard.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-tachometer-alt w-5 text-gray-400 mr-2"></i> Dashboard
+              </a>
+              <a href="profile.html" class="flex items-center px-4 py-2 text-gray-700 bg-gray-50">
+                <i class="fas fa-user-circle w-5 text-primary mr-2"></i> My Profile
+              </a>
+              <a href="accepted-tasks.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-check-circle w-5 text-gray-400 mr-2"></i> Tasks I'm Working On
+              </a>
+              <div class="border-t border-gray-100 my-1"></div>
+              <a href="#" id="logout-button" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-sign-out-alt w-5 text-gray-400 mr-2"></i> Logout
+              </a>
+            </div>
+          </div>
+          
+          <!-- Login/Signup options (visible when logged out) -->
+          <div class="flex items-center space-x-2" id="auth-buttons">
+            <a class="px-4 py-2 text-gray-700 font-medium hover:text-primary transition-colors" href="login.html" id="login-menu-item">
+              Log In
+            </a>
+            <a class="px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors" href="signup.html" id="signup-menu-item">
+              Sign Up
+            </a>
+          </div>
+        </nav>
+      </div>
+    </div>
+    
+    <!-- Mobile menu (hidden by default) -->
+    <div class="md:hidden bg-white border-t border-gray-100 px-4 py-2 hidden" id="mobile-menu">
+      <!-- Mobile search -->
+      <div class="relative mb-4">
+        <input type="text" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <i class="fas fa-search text-gray-400"></i>
+        </div>
+      </div>
+      
+      <div class="flex flex-col space-y-1">
+        <a href="index.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Home</a>
+        <a href="tasks.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Browse Tasks</a>
+        <a href="post-task.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Post a Task</a>
+        <div class="border-t border-gray-100 my-1 pt-1" id="mobile-auth-links">
+          <a href="login.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Log In</a>
+          <a href="signup.html" class="px-2 py-2 text-primary font-medium">Create an Account</a>
+        </div>
+        <div id="mobile-user-links" class="hidden">
+          <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="dashboard.html">
+            <i class="fas fa-tachometer-alt w-5 mr-2 text-gray-400"></i> Dashboard
+          </a>
+          <a class="px-2 py-2 text-primary bg-primary-light rounded-md flex items-center" href="profile.html">
+            <i class="fas fa-user w-5 mr-2 text-primary"></i> My Profile
+          </a>
+          <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="accepted-tasks.html">
+            <i class="fas fa-check-circle w-5 mr-2 text-gray-400"></i> Tasks I'm Working On
+          </a>
+          <div class="border-t border-gray-100 my-1"></div>
+          <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="#" id="mobile-logout-button">
+            <i class="fas fa-sign-out-alt w-5 mr-2 text-gray-400"></i> Logout
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="py-8">
+    <div class="container mx-auto px-4">
+      <!-- Page header -->
+      <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">My Profile</h1>
+        <p class="text-sm text-gray-600">Manage your profile information and preferences</p>
+      </div>
+
+      <!-- Profile content -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left sidebar with user info -->
+        <div class="lg:col-span-1">
+          <!-- Profile card -->
+          <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+            <!-- Loading state (hidden by default) -->
+            <div id="profile-loading" class="p-6 text-center hidden">
+              <div class="inline-block w-12 h-12 border-4 border-gray-200 border-t-primary rounded-full animate-spin mb-4"></div>
+              <p class="text-gray-500">Loading profile...</p>
+            </div>
+
+            <!-- Profile content -->
+            <div id="profile-content">
+              <!-- Cover image (placeholder/default) -->
+              <div class="h-32 bg-gradient-to-r from-blue-400 to-primary relative">
+                <button id="change-cover-btn" class="absolute bottom-2 right-2 bg-white bg-opacity-75 hover:bg-opacity-100 text-gray-700 rounded-full p-2 text-sm">
+                  <i class="fas fa-camera mr-1"></i> Change Cover
+                </button>
+              </div>
+
+              <!-- Avatar and basic info -->
+              <div class="px-6 pb-6">
+                <div class="flex flex-col items-center -mt-12">
+                  <div class="relative">
+                    <div class="w-24 h-24 rounded-full border-4 border-white bg-gradient-to-tr from-purple-400 to-blue-500 text-white flex items-center justify-center text-3xl font-bold" id="profile-avatar">
+                      V
+                    </div>
+                    <button id="change-avatar-btn" class="absolute bottom-0 right-0 bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-full p-2 shadow-sm">
+                      <i class="fas fa-camera"></i>
+                    </button>
+                  </div>
+
+                  <h2 class="mt-4 text-xl font-bold" id="profile-name">User Name</h2>
+                  <p class="text-gray-500 text-sm" id="profile-joined">Member since Jan 2023</p>
+                  
+                  <!-- User ratings -->
+                  <div class="flex items-center mt-2">
+                    <div class="flex">
+                      <i class="fas fa-star text-yellow-400"></i>
+                      <i class="fas fa-star text-yellow-400"></i>
+                      <i class="fas fa-star text-yellow-400"></i>
+                      <i class="fas fa-star text-yellow-400"></i>
+                      <i class="fas fa-star-half-alt text-yellow-400"></i>
+                    </div>
+                    <span class="ml-2 text-sm text-gray-600">
+                      <span id="profile-rating">4.5</span>
+                      (<span id="profile-reviews-count">12</span> reviews)
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Quick stats -->
+                <div class="grid grid-cols-3 gap-2 mt-6 text-center">
+                  <div class="bg-gray-50 p-3 rounded-lg">
+                    <div class="text-xl font-bold text-primary" id="profile-tasks-posted">0</div>
+                    <div class="text-xs text-gray-500">Tasks Posted</div>
+                  </div>
+                  <div class="bg-gray-50 p-3 rounded-lg">
+                    <div class="text-xl font-bold text-green-600" id="profile-tasks-completed">0</div>
+                    <div class="text-xs text-gray-500">Completed</div>
+                  </div>
+                  <div class="bg-gray-50 p-3 rounded-lg">
+                    <div class="text-xl font-bold text-blue-500" id="profile-response-rate">0%</div>
+                    <div class="text-xs text-gray-500">Response Rate</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact information card -->
+          <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+            <div class="p-6">
+              <h3 class="text-lg font-semibold mb-4 flex items-center justify-between">
+                <span>Contact Information</span>
+                <button id="edit-contact-btn" class="text-sm text-primary hover:underline">
+                  <i class="fas fa-pencil-alt mr-1"></i> Edit
+                </button>
+              </h3>
+
+              <!-- View mode -->
+              <div id="contact-view-mode">
+                <div class="space-y-3">
+                  <div class="flex items-center">
+                    <i class="fas fa-envelope w-5 text-gray-400 mr-2"></i>
+                    <span id="profile-email">user@example.com</span>
+                  </div>
+                  <div class="flex items-center">
+                    <i class="fas fa-phone w-5 text-gray-400 mr-2"></i>
+                    <span id="profile-phone">Not provided</span>
+                  </div>
+                  <div class="flex items-center">
+                    <i class="fas fa-map-marker-alt w-5 text-gray-400 mr-2"></i>
+                    <span id="profile-location">Not provided</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Edit mode (hidden by default) -->
+              <div id="contact-edit-mode" class="hidden">
+                <form id="contact-form" class="space-y-4">
+                  <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="email" name="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                  </div>
+                  <div>
+                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                    <input type="tel" id="phone" name="phone" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                  </div>
+                  <div>
+                    <label for="location" class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                    <input type="text" id="location" name="location" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" placeholder="City, Country">
+                  </div>
+                  <div class="flex justify-end space-x-3 pt-2">
+                    <button type="button" id="cancel-contact-edit" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg">Save Changes</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Account settings card -->
+          <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div class="p-6">
+              <h3 class="text-lg font-semibold mb-4">Account Settings</h3>
+              <div class="space-y-3">
+                <a href="#" class="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg text-gray-700">
+                  <div class="flex items-center">
+                    <i class="fas fa-lock w-5 text-gray-400 mr-2"></i>
+                    <span>Change Password</span>
+                  </div>
+                  <i class="fas fa-chevron-right text-gray-400"></i>
+                </a>
+                <a href="#" class="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg text-gray-700">
+                  <div class="flex items-center">
+                    <i class="fas fa-bell w-5 text-gray-400 mr-2"></i>
+                    <span>Notification Settings</span>
+                  </div>
+                  <i class="fas fa-chevron-right text-gray-400"></i>
+                </a>
+                <a href="#" class="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg text-gray-700">
+                  <div class="flex items-center">
+                    <i class="fas fa-credit-card w-5 text-gray-400 mr-2"></i>
+                    <span>Payment Methods</span>
+                  </div>
+                  <i class="fas fa-chevron-right text-gray-400"></i>
+                </a>
+                <div class="border-t border-gray-100 my-2 pt-2"></div>
+                <button id="deactivate-account-btn" class="flex items-center text-red-600 p-2 hover:bg-red-50 rounded-lg w-full">
+                  <i class="fas fa-user-slash w-5 mr-2"></i>
+                  <span>Deactivate Account</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Right content area -->
+        <div class="lg:col-span-2">
+          <!-- Profile details card -->
+          <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+            <div class="p-6">
+              <h3 class="text-lg font-semibold mb-4 flex items-center justify-between">
+                <span>About Me</span>
+                <button id="edit-about-btn" class="text-sm text-primary hover:underline">
+                  <i class="fas fa-pencil-alt mr-1"></i> Edit
+                </button>
+              </h3>
+
+              <!-- View mode -->
+              <div id="about-view-mode">
+                <p class="text-gray-600" id="profile-bio">No bio provided yet.</p>
+                
+                <!-- Skills section -->
+                <h4 class="font-medium text-gray-900 mt-6 mb-2">Skills</h4>
+                <div id="skills-container" class="flex flex-wrap gap-2">
+                  <span class="text-gray-500 text-sm">No skills added yet.</span>
+                </div>
+                
+                <!-- Languages section -->
+                <h4 class="font-medium text-gray-900 mt-6 mb-2">Languages</h4>
+                <div id="languages-container" class="flex flex-wrap gap-2">
+                  <span class="text-gray-500 text-sm">No languages added yet.</span>
+                </div>
+              </div>
+
+              <!-- Edit mode (hidden by default) -->
+              <div id="about-edit-mode" class="hidden">
+                <form id="about-form" class="space-y-4">
+                  <div>
+                    <label for="bio" class="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+                    <textarea id="bio" name="bio" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Tell others about yourself..."></textarea>
+                  </div>
+                  <div>
+                    <label for="skills" class="block text-sm font-medium text-gray-700 mb-1">Skills (comma separated)</label>
+                    <input type="text" id="skills" name="skills" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" placeholder="e.g. Web Design, Cooking, Math Tutoring">
+                  </div>
+                  <div>
+                    <label for="languages" class="block text-sm font-medium text-gray-700 mb-1">Languages (comma separated)</label>
+                    <input type="text" id="languages" name="languages" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" placeholder="e.g. English, Hindi, Spanish">
+                  </div>
+                  <div class="flex justify-end space-x-3 pt-2">
+                    <button type="button" id="cancel-about-edit" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg">Save Changes</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Reviews card -->
+          <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+            <div class="p-6">
+              <h3 class="text-lg font-semibold mb-4">Reviews</h3>
+              
+              <!-- Loading state -->
+              <div id="reviews-loading" class="py-4 flex justify-center">
+                <div class="w-8 h-8 border-4 border-gray-200 border-t-primary rounded-full animate-spin"></div>
+              </div>
+              
+              <!-- Reviews list -->
+              <div id="reviews-list" class="divide-y divide-gray-100 hidden">
+                <!-- Reviews will be dynamically inserted here -->
+              </div>
+              
+              <!-- No reviews state -->
+              <div id="no-reviews" class="py-8 text-center hidden">
+                <div class="inline-block p-3 rounded-full bg-gray-100 mb-3">
+                  <i class="fas fa-star text-gray-400 text-xl"></i>
+                </div>
+                <p class="text-gray-500">No reviews yet</p>
+              </div>
+              
+              <!-- Pagination -->
+              <div id="reviews-pagination" class="flex justify-center mt-6 hidden">
+                <nav class="flex items-center">
+                  <button id="prev-page" class="px-3 py-1 border border-gray-300 rounded-l-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-chevron-left"></i>
+                  </button>
+                  <span id="page-info" class="px-4 py-1 border-t border-b border-gray-300 text-gray-700">Page 1 of 1</span>
+                  <button id="next-page" class="px-3 py-1 border border-gray-300 rounded-r-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-chevron-right"></i>
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Recent activity -->
+          <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div class="p-6">
+              <h3 class="text-lg font-semibold mb-4">Recent Activity</h3>
+              
+              <!-- Activity loading -->
+              <div id="activity-loading" class="py-4 flex justify-center">
+                <div class="w-8 h-8 border-4 border-gray-200 border-t-primary rounded-full animate-spin"></div>
+              </div>
+              
+              <!-- Activity timeline -->
+              <div id="activity-timeline" class="space-y-6 hidden">
+                <!-- Activity items will be dynamically inserted here -->
+              </div>
+              
+              <!-- No activity state -->
+              <div id="no-activity" class="py-8 text-center hidden">
+                <div class="inline-block p-3 rounded-full bg-gray-100 mb-3">
+                  <i class="fas fa-history text-gray-400 text-xl"></i>
+                </div>
+                <p class="text-gray-500">No recent activity</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  
+  <!-- Upload avatar modal -->
+  <div id="avatar-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-50" id="avatar-modal-overlay"></div>
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 z-10">
+      <div class="p-6">
+        <h3 class="text-xl font-bold mb-6">Change Profile Picture</h3>
+        <form id="avatar-form" class="space-y-4">
+          <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+            <input type="file" id="avatar-input" class="hidden" accept="image/*">
+            <div id="avatar-preview" class="w-32 h-32 mx-auto rounded-full bg-gradient-to-tr from-purple-400 to-blue-500 text-white flex items-center justify-center text-3xl font-bold mb-4">V</div>
+            <button type="button" id="select-avatar-btn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg inline-flex items-center">
+              <i class="fas fa-upload mr-2"></i> Select Image
+            </button>
+            <p class="text-xs text-gray-500 mt-2">JPG, PNG or GIF (max. 2MB)</p>
+          </div>
+          
+          <div class="flex justify-end space-x-3">
+            <button type="button" id="close-avatar-modal" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+            <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg">Upload & Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Change password modal -->
+  <div id="password-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-50" id="password-modal-overlay"></div>
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 z-10">
+      <div class="p-6">
+        <h3 class="text-xl font-bold mb-6">Change Password</h3>
+        <form id="password-form" class="space-y-4">
+          <div>
+            <label for="current-password" class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+            <div class="relative">
+              <input type="password" id="current-password" name="currentPassword" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" 
+                placeholder="Enter your current password" required>
+              <button type="button" class="toggle-password absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div>
+            <label for="new-password" class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+            <div class="relative">
+              <input type="password" id="new-password" name="newPassword" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" 
+                placeholder="Enter your new password" required>
+              <button type="button" class="toggle-password absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
+            <div class="mt-1 text-xs text-gray-500">Password must be at least 8 characters long with letters and numbers</div>
+          </div>
+          
+          <div>
+            <label for="confirm-password" class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+            <div class="relative">
+              <input type="password" id="confirm-password" name="confirmPassword" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" 
+                placeholder="Confirm your new password" required>
+              <button type="button" class="toggle-password absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="flex justify-end space-x-3 pt-2">
+            <button type="button" id="close-password-modal" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+            <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg">Update Password</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cover upload modal -->
+  <div id="cover-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-50" id="cover-modal-overlay"></div>
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 z-10">
+      <div class="p-6">
+        <h3 class="text-xl font-bold mb-6">Change Cover Image</h3>
+        <form id="cover-form" class="space-y-4">
+          <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+            <input type="file" id="cover-input" class="hidden" accept="image/*">
+            <div id="cover-preview" class="h-32 w-full rounded-lg bg-gray-100 mb-4 flex items-center justify-center text-gray-400">
+              <i class="fas fa-image text-3xl"></i>
+            </div>
+            <button type="button" id="select-cover-btn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg inline-flex items-center">
+              <i class="fas fa-upload mr-2"></i> Select Image
+            </button>
+            <p class="text-xs text-gray-500 mt-2">JPG, PNG (recommended size: 1200×300)</p>
+          </div>
+          
+          <div class="flex justify-end space-x-3">
+            <button type="button" id="close-cover-modal" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+            <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg">Upload & Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Deactivate account confirmation modal -->
+  <div id="deactivate-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-50" id="deactivate-modal-overlay"></div>
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 z-10">
+      <div class="p-6">
+        <h3 class="text-xl font-bold mb-2">Deactivate Your Account?</h3>
+        <p class="text-gray-600 mb-6">This action will disable your account and hide your profile. You can reactivate your account later by logging in.</p>
+        
+        <div class="bg-red-50 p-4 rounded-lg mb-6">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <i class="fas fa-exclamation-triangle text-red-600"></i>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-red-600">
+                All your active tasks will be closed and any pending payments will be processed before deactivation.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-6">
+          <label class="flex items-center">
+            <input type="checkbox" id="deactivate-confirm" class="rounded border-gray-300 text-primary focus:ring-primary">
+            <span class="ml-2 text-sm text-gray-700">I understand this action and want to deactivate my account</span>
+          </label>
+        </div>
+        
+        <div class="flex justify-end space-x-3">
+          <button type="button" id="close-deactivate-modal" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+          <button type="button" id="confirm-deactivate" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg" disabled>Deactivate Account</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 text-white py-8 mt-12">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-4 gap-8">
+        <div>
+          <a class="text-white font-bold text-2xl flex items-center mb-4" href="index.html">
+            <span class="bg-white text-primary p-1 rounded mr-1.5 flex items-center justify-center w-8 h-8">V</span>ictor
+          </a>
+          <p class="text-gray-300 mb-4">Connecting people for tasks - anytime, anywhere. Get help or help others.</p>
+          <div class="flex space-x-4">
+            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-twitter"></i></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-instagram"></i></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-linkedin-in"></i></a>
+          </div>
+        </div>
+        
+        <div>
+          <h4 class="font-semibold mb-4 text-lg">For Task Posters</h4>
+          <ul class="space-y-2">
+            <li><a href="post-task.html" class="text-gray-300 hover:text-white transition-colors">Post a Task</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">How it Works</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Pricing</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">FAQ</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 class="font-semibold mb-4 text-lg">For Task Performers</h4>
+          <ul class="space-y-2">
+            <li><a href="tasks.html" class="text-gray-300 hover:text-white transition-colors">Browse Tasks</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Task Categories</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Earn Money</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Success Stories</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 class="font-semibold mb-4 text-lg">Support</h4>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Help Center</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Contact Us</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Privacy Policy</a></li>
+            <li><a href="server-status.html" class="text-gray-300 hover:text-white transition-colors">Server Status</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center">
+        <p class="text-gray-300">© 2023 Victor - Connect for Tasks. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Get API URL from config
+      const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+      
+      // Mobile menu toggle
+      document.getElementById('mobile-menu-button').addEventListener('click', function() {
+        document.getElementById('mobile-menu').classList.toggle('hidden');
+      });
+      
+      // Check if user is logged in
+      const isLoggedIn = checkLoginStatus();
+      
+      if (!isLoggedIn) {
+        // Redirect to login page if not logged in
+        window.location.href = 'login.html?redirect=profile.html&message=Please login to view your profile';
+        return;
+      }
+      
+      // Setup user dropdown toggle
+      setupUserDropdown();
+      
+      // Setup notifications dropdown toggle
+      setupNotificationsDropdown();
+      
+      // Load profile data
+      loadProfileData();
+      
+      // Setup form toggle handlers
+      setupFormToggles();
+      
+      // Setup modal handlers
+      setupModals();
+      
+      // Load reviews
+      loadReviews();
+      
+      // Load activity
+      loadActivity();
+    });
+    
+    // Check login status and update UI accordingly
+    function checkLoginStatus() {
+      const token = localStorage.getItem('token');
+      const username = localStorage.getItem('username');
+      const userEmail = localStorage.getItem('userEmail');
+      const userId = localStorage.getItem('userId');
+      
+      const authButtons = document.getElementById('auth-buttons');
+      const userMenuContainer = document.getElementById('user-menu-container');
+      const mobileAuthLinks = document.getElementById('mobile-auth-links');
+      const mobileUserLinks = document.getElementById('mobile-user-links');
+      
+      if (token && userId) {
+        // User is logged in
+        if (authButtons) authButtons.classList.add('hidden');
+        if (userMenuContainer) userMenuContainer.classList.remove('hidden');
+        if (mobileAuthLinks) mobileAuthLinks.classList.add('hidden');
+        if (mobileUserLinks) mobileUserLinks.classList.remove('hidden');
+        
+        // Update user info
+        const usernameDisplay = document.getElementById('username-display');
+        const userNameDropdown = document.getElementById('user-name-dropdown');
+        const userEmailDropdown = document.getElementById('user-email-dropdown');
+        const userAvatar = document.getElementById('user-avatar');
+        
+        if (usernameDisplay && username) usernameDisplay.textContent = username;
+        if (userNameDropdown && username) userNameDropdown.textContent = username;
+        if (userEmailDropdown && userEmail) userEmailDropdown.textContent = userEmail;
+        if (userAvatar && username) userAvatar.textContent = username.charAt(0).toUpperCase();
+        
+        // Setup logout buttons
+        const logoutButton = document.getElementById('logout-button');
+        const mobileLogoutButton = document.getElementById('mobile-logout-button');
+        
+        if (logoutButton) {
+          logoutButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            logout();
+          });
+        }
+        
+        if (mobileLogoutButton) {
+          mobileLogoutButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            logout();
+          });
+        }
+        
+        return true;
+      } else {
+        // User is not logged in
+        if (authButtons) authButtons.classList.remove('hidden');
+        if (userMenuContainer) userMenuContainer.classList.add('hidden');
+        if (mobileAuthLinks) mobileAuthLinks.classList.remove('hidden');
+        if (mobileUserLinks) mobileUserLinks.classList.add('hidden');
+        
+        return false;
+      }
+    }
+    
+    // Setup user dropdown
+    function setupUserDropdown() {
+      const userMenuButton = document.getElementById('user-menu-button');
+      const userDropdown = document.getElementById('user-dropdown');
+      
+      if (userMenuButton && userDropdown) {
+        userMenuButton.addEventListener('click', function(e) {
+          e.stopPropagation();
+          userDropdown.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+          if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
+            userDropdown.classList.add('hidden');
+          }
+        });
+      }
+    }
+    
+    // Setup notifications dropdown
+    function setupNotificationsDropdown() {
+      const notificationsButton = document.getElementById('notifications-button');
+      const notificationsDropdown = document.getElementById('notifications-dropdown');
+      
+      if (notificationsButton && notificationsDropdown) {
+        notificationsButton.addEventListener('click', function(e) {
+          e.stopPropagation();
+          notificationsDropdown.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+          if (!notificationsButton.contains(event.target) && !notificationsDropdown.contains(event.target)) {
+            notificationsDropdown.classList.add('hidden');
+          }
+        });
+      }
+    }
+    
+    // Setup form toggle handlers
+    function setupFormToggles() {
+      // Contact information form
+      const editContactBtn = document.getElementById('edit-contact-btn');
+      const contactViewMode = document.getElementById('contact-view-mode');
+      const contactEditMode = document.getElementById('contact-edit-mode');
+      const cancelContactEdit = document.getElementById('cancel-contact-edit');
+      const contactForm = document.getElementById('contact-form');
+      
+      if (editContactBtn && contactViewMode && contactEditMode) {
+        editContactBtn.addEventListener('click', function() {
+          contactViewMode.classList.add('hidden');
+          contactEditMode.classList.remove('hidden');
+          
+          // Populate form with current values
+          document.getElementById('email').value = document.getElementById('profile-email').textContent;
+          document.getElementById('phone').value = document.getElementById('profile-phone').textContent === 'Not provided' ? '' : document.getElementById('profile-phone').textContent;
+          document.getElementById('location').value = document.getElementById('profile-location').textContent === 'Not provided' ? '' : document.getElementById('profile-location').textContent;
+        });
+        
+        if (cancelContactEdit) {
+          cancelContactEdit.addEventListener('click', function() {
+            contactEditMode.classList.add('hidden');
+            contactViewMode.classList.remove('hidden');
+          });
+        }
+        
+        if (contactForm) {
+          contactForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            updateContactInfo();
+          });
+        }
+      }
+      
+      // About me form
+      const editAboutBtn = document.getElementById('edit-about-btn');
+      const aboutViewMode = document.getElementById('about-view-mode');
+      const aboutEditMode = document.getElementById('about-edit-mode');
+      const cancelAboutEdit = document.getElementById('cancel-about-edit');
+      const aboutForm = document.getElementById('about-form');
+      
+      if (editAboutBtn && aboutViewMode && aboutEditMode) {
+        editAboutBtn.addEventListener('click', function() {
+          aboutViewMode.classList.add('hidden');
+          aboutEditMode.classList.remove('hidden');
+          
+          // Populate form with current values
+          const bio = document.getElementById('profile-bio').textContent === 'No bio provided yet.' ? '' : document.getElementById('profile-bio').textContent;
+          document.getElementById('bio').value = bio;
+          
+          // Extract skills
+          const skillsContainer = document.getElementById('skills-container');
+          let skills = [];
+          if (skillsContainer.querySelector('.text-gray-500') === null) {
+            skillsContainer.querySelectorAll('.bg-gray-100').forEach(skill => {
+              skills.push(skill.textContent.trim());
+            });
+          }
+          document.getElementById('skills').value = skills.join(', ');
+          
+          // Extract languages
+          const languagesContainer = document.getElementById('languages-container');
+          let languages = [];
+          if (languagesContainer.querySelector('.text-gray-500') === null) {
+            languagesContainer.querySelectorAll('.bg-gray-100').forEach(language => {
+              languages.push(language.textContent.trim());
+            });
+          }
+          document.getElementById('languages').value = languages.join(', ');
+        });
+        
+        if (cancelAboutEdit) {
+          cancelAboutEdit.addEventListener('click', function() {
+            aboutEditMode.classList.add('hidden');
+            aboutViewMode.classList.remove('hidden');
+          });
+        }
+        
+        if (aboutForm) {
+          aboutForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            updateAboutInfo();
+          });
+        }
+      }
+    }
+    
+    // Setup modals
+    function setupModals() {
+      // Avatar modal
+      const changeAvatarBtn = document.getElementById('change-avatar-btn');
+      const avatarModal = document.getElementById('avatar-modal');
+      const closeAvatarModal = document.getElementById('close-avatar-modal');
+      const avatarModalOverlay = document.getElementById('avatar-modal-overlay');
+      const selectAvatarBtn = document.getElementById('select-avatar-btn');
+      const avatarInput = document.getElementById('avatar-input');
+      const avatarForm = document.getElementById('avatar-form');
+      
+      if (changeAvatarBtn && avatarModal) {
+        changeAvatarBtn.addEventListener('click', function() {
+          avatarModal.classList.remove('hidden');
+        });
+      }
+      
+      if (closeAvatarModal) {
+        closeAvatarModal.addEventListener('click', function() {
+          avatarModal.classList.add('hidden');
+        });
+      }
+      
+      if (avatarModalOverlay) {
+        avatarModalOverlay.addEventListener('click', function() {
+          avatarModal.classList.add('hidden');
+        });
+      }
+      
+      if (selectAvatarBtn && avatarInput) {
+        selectAvatarBtn.addEventListener('click', function() {
+          avatarInput.click();
+        });
+        
+        avatarInput.addEventListener('change', function() {
+          if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              document.getElementById('avatar-preview').innerHTML = `
+                <img src="${e.target.result}" class="w-full h-full object-cover rounded-full">
+              `;
+            }
+            reader.readAsDataURL(this.files[0]);
+          }
+        });
+      }
+      
+      if (avatarForm) {
+        avatarForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          uploadAvatar();
+        });
+      }
+      
+      // Cover modal
+      const changeCoverBtn = document.getElementById('change-cover-btn');
+      const coverModal = document.getElementById('cover-modal');
+      const closeCoverModal = document.getElementById('close-cover-modal');
+      const coverModalOverlay = document.getElementById('cover-modal-overlay');
+      const selectCoverBtn = document.getElementById('select-cover-btn');
+      const coverInput = document.getElementById('cover-input');
+      const coverForm = document.getElementById('cover-form');
+      
+      if (changeCoverBtn && coverModal) {
+        changeCoverBtn.addEventListener('click', function() {
+          coverModal.classList.remove('hidden');
+        });
+      }
+      
+      if (closeCoverModal) {
+        closeCoverModal.addEventListener('click', function() {
+          coverModal.classList.add('hidden');
+        });
+      }
+      
+      if (coverModalOverlay) {
+        coverModalOverlay.addEventListener('click', function() {
+          coverModal.classList.add('hidden');
+        });
+      }
+      
+      if (selectCoverBtn && coverInput) {
+        selectCoverBtn.addEventListener('click', function() {
+          coverInput.click();
+        });
+        
+        coverInput.addEventListener('change', function() {
+          if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              document.getElementById('cover-preview').innerHTML = `
+                <img src="${e.target.result}" class="w-full h-full object-cover rounded-lg">
+              `;
+            }
+            reader.readAsDataURL(this.files[0]);
+          }
+        });
+      }
+      
+      if (coverForm) {
+        coverForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          uploadCover();
+        });
+      }
+      
+      // Password modal setup
+      document.querySelectorAll('a[href="#"]').forEach(link => {
+        if (link.textContent.includes('Change Password')) {
+          link.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('password-modal').classList.remove('hidden');
+          });
+        }
+      });
+      
+      const closePasswordModal = document.getElementById('close-password-modal');
+      const passwordModalOverlay = document.getElementById('password-modal-overlay');
+      const passwordForm = document.getElementById('password-form');
+      
+      if (closePasswordModal) {
+        closePasswordModal.addEventListener('click', function() {
+          document.getElementById('password-modal').classList.add('hidden');
+        });
+      }
+      
+      if (passwordModalOverlay) {
+        passwordModalOverlay.addEventListener('click', function() {
+          document.getElementById('password-modal').classList.add('hidden');
+        });
+      }
+      
+      if (passwordForm) {
+        passwordForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          changePassword();
+        });
+      }
+      
+      // Toggle password visibility
+      document.querySelectorAll('.toggle-password').forEach(toggle => {
+        toggle.addEventListener('click', function() {
+          const input = this.previousElementSibling;
+          const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+          input.setAttribute('type', type);
+          
+          // Toggle icon
+          const icon = this.querySelector('i');
+          if (type === 'text') {
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+          } else {
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+          }
+        });
+      });
+      
+      // Deactivate account modal
+      const deactivateBtn = document.getElementById('deactivate-account-btn');
+      const deactivateModal = document.getElementById('deactivate-modal');
+      const closeDeactivateModal = document.getElementById('close-deactivate-modal');
+      const deactivateModalOverlay = document.getElementById('deactivate-modal-overlay');
+      const deactivateConfirmCheckbox = document.getElementById('deactivate-confirm');
+      const confirmDeactivateBtn = document.getElementById('confirm-deactivate');
+      
+      if (deactivateBtn && deactivateModal) {
+        deactivateBtn.addEventListener('click', function() {
+          deactivateModal.classList.remove('hidden');
+        });
+      }
+      
+      if (closeDeactivateModal) {
+        closeDeactivateModal.addEventListener('click', function() {
+          deactivateModal.classList.add('hidden');
+        });
+      }
+      
+      if (deactivateModalOverlay) {
+        deactivateModalOverlay.addEventListener('click', function() {
+          deactivateModal.classList.add('hidden');
+        });
+      }
+      
+      if (deactivateConfirmCheckbox && confirmDeactivateBtn) {
+        deactivateConfirmCheckbox.addEventListener('change', function() {
+          confirmDeactivateBtn.disabled = !this.checked;
+        });
+        
+        confirmDeactivateBtn.addEventListener('click', function() {
+          if (deactivateConfirmCheckbox.checked) {
+            deactivateAccount();
+          }
+        });
+      }
+    }
+    
+    // Load profile data
+    async function loadProfileData() {
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('userId');
+        
+        if (!token || !userId) {
+          throw new Error('Authentication required');
+        }
+        
+        document.getElementById('profile-loading').classList.remove('hidden');
+        document.getElementById('profile-content').classList.add('hidden');
+        
+        // Fetch user profile data
+        const response = await fetch(`${API_URL}/api/users/${userId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to load profile data');
+        }
+        
+        const userData = await response.json();
+        
+        document.getElementById('profile-loading').classList.add('hidden');
+        document.getElementById('profile-content').classList.remove('hidden');
+        
+        // Update profile information
+        document.getElementById('profile-name').textContent = userData.username || 'User';
+        document.getElementById('profile-avatar').textContent = (userData.username || 'U').charAt(0).toUpperCase();
+        
+        // Format joined date
+        const joinedDate = userData.createdAt ? new Date(userData.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : 'Recently';
+        document.getElementById('profile-joined').textContent = `Member since ${joinedDate}`;
+        
+        // Update email and contact info
+        document.getElementById('profile-email').textContent = userData.email || 'No email provided';
+        document.getElementById('profile-phone').textContent = userData.phone || 'Not provided';
+        document.getElementById('profile-location').textContent = userData.location || 'Not provided';
+        
+        // Update bio
+        if (userData.bio) {
+          document.getElementById('profile-bio').textContent = userData.bio;
+        }
+        
+        // Update skills
+        if (userData.skills && userData.skills.length > 0) {
+          const skillsContainer = document.getElementById('skills-container');
+          skillsContainer.innerHTML = '';
+          
+          userData.skills.forEach(skill => {
+            const skillTag = document.createElement('span');
+            skillTag.className = 'px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-700';
+            skillTag.textContent = skill;
+            skillsContainer.appendChild(skillTag);
+          });
+        }
+        
+        // Update languages
+        if (userData.languages && userData.languages.length > 0) {
+          const languagesContainer = document.getElementById('languages-container');
+          languagesContainer.innerHTML = '';
+          
+          userData.languages.forEach(language => {
+            const languageTag = document.createElement('span');
+            languageTag.className = 'px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-700';
+            languageTag.textContent = language;
+            languagesContainer.appendChild(languageTag);
+          });
+        }
+        
+        // Update stats
+        document.getElementById('profile-tasks-posted').textContent = userData.tasksPosted || 0;
+        document.getElementById('profile-tasks-completed').textContent = userData.tasksCompleted || 0;
+        document.getElementById('profile-response-rate').textContent = `${userData.responseRate || 0}%`;
+        
+        // Update rating
+        if (userData.rating) {
+          document.getElementById('profile-rating').textContent = userData.rating.toFixed(1);
+          document.getElementById('profile-reviews-count').textContent = userData.reviewCount || 0;
+        }
+        
+        // Update avatar if available
+        if (userData.profileImage) {
+            const profileAvatar = document.getElementById('profile-avatar');
+            profileAvatar.innerHTML = `<img src="${userData.profileImage}" alt="${userData.username}" class="w-full h-full object-cover rounded-full">`;
+            
+            // Also update avatar preview in modal
+            const avatarPreview = document.getElementById('avatar-preview');
+            if (avatarPreview) {
+              avatarPreview.innerHTML = `<img src="${userData.profileImage}" alt="${userData.username}" class="w-full h-full object-cover rounded-full">`;
+            }
+          }
+          
+          // Update cover image if available
+          if (userData.coverImage) {
+            const coverContainer = document.querySelector('.h-32.bg-gradient-to-r');
+            if (coverContainer) {
+              coverContainer.style.backgroundImage = `url(${userData.coverImage})`;
+              coverContainer.style.backgroundSize = 'cover';
+              coverContainer.style.backgroundPosition = 'center';
+              coverContainer.classList.remove('bg-gradient-to-r', 'from-blue-400', 'to-primary');
+            }
+          }
+          
+        } catch (error) {
+          console.error('Error loading profile data:', error);
+          document.getElementById('profile-loading').classList.add('hidden');
+          document.getElementById('profile-content').classList.remove('hidden');
+          
+          // Show error notification
+          if (window.showNotification) {
+            window.showNotification('Failed to load profile data. Please try again.', 'error');
+          }
+        }
+      }
+      
+      // Update contact information
+      async function updateContactInfo() {
+        try {
+          const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+          const token = localStorage.getItem('token');
+          const userId = localStorage.getItem('userId');
+          
+          if (!token || !userId) {
+            throw new Error('Authentication required');
+          }
+          
+          const email = document.getElementById('email').value.trim();
+          const phone = document.getElementById('phone').value.trim();
+          const location = document.getElementById('location').value.trim();
+          
+          // Validate email
+          if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            throw new Error('Please enter a valid email address');
+          }
+          
+          // Prepare update data
+          const updateData = {
+            email: email,
+            phone: phone || null,
+            location: location || null
+          };
+          
+          // Send update request
+          const response = await fetch(`${API_URL}/api/users/${userId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(updateData)
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to update contact information');
+          }
+          
+          // Update UI
+          document.getElementById('profile-email').textContent = email;
+          document.getElementById('profile-phone').textContent = phone || 'Not provided';
+          document.getElementById('profile-location').textContent = location || 'Not provided';
+          
+          // Hide edit form, show view mode
+          document.getElementById('contact-edit-mode').classList.add('hidden');
+          document.getElementById('contact-view-mode').classList.remove('hidden');
+          
+          // Show success notification
+          if (window.showNotification) {
+            window.showNotification('Contact information updated successfully', 'success');
+          }
+          
+          // Update local storage
+          if (email !== localStorage.getItem('userEmail')) {
+            localStorage.setItem('userEmail', email);
+          }
+          
+        } catch (error) {
+          console.error('Error updating contact info:', error);
+          
+          // Show error notification
+          if (window.showNotification) {
+            window.showNotification(error.message || 'Failed to update contact information', 'error');
+          }
+        }
+      }
+      
+      // Update about information
+      async function updateAboutInfo() {
+        try {
+          const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+          const token = localStorage.getItem('token');
+          const userId = localStorage.getItem('userId');
+          
+          if (!token || !userId) {
+            throw new Error('Authentication required');
+          }
+          
+          const bio = document.getElementById('bio').value.trim();
+          const skillsInput = document.getElementById('skills').value.trim();
+          const languagesInput = document.getElementById('languages').value.trim();
+          
+          // Parse skills and languages
+          const skills = skillsInput ? skillsInput.split(',').map(skill => skill.trim()).filter(skill => skill) : [];
+          const languages = languagesInput ? languagesInput.split(',').map(language => language.trim()).filter(language => language) : [];
+          
+          // Prepare update data
+          const updateData = {
+            bio: bio || null,
+            skills: skills,
+            languages: languages
+          };
+          
+          // Send update request
+          const response = await fetch(`${API_URL}/api/users/${userId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(updateData)
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to update profile information');
+          }
+          
+          // Update UI
+          document.getElementById('profile-bio').textContent = bio || 'No bio provided yet.';
+          
+          // Update skills
+          const skillsContainer = document.getElementById('skills-container');
+          skillsContainer.innerHTML = '';
+          
+          if (skills.length > 0) {
+            skills.forEach(skill => {
+              const skillTag = document.createElement('span');
+              skillTag.className = 'px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-700';
+              skillTag.textContent = skill;
+              skillsContainer.appendChild(skillTag);
+            });
+          } else {
+            skillsContainer.innerHTML = '<span class="text-gray-500 text-sm">No skills added yet.</span>';
+          }
+          
+          // Update languages
+          const languagesContainer = document.getElementById('languages-container');
+          languagesContainer.innerHTML = '';
+          
+          if (languages.length > 0) {
+            languages.forEach(language => {
+              const languageTag = document.createElement('span');
+              languageTag.className = 'px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-700';
+              languageTag.textContent = language;
+              languagesContainer.appendChild(languageTag);
+            });
+          } else {
+            languagesContainer.innerHTML = '<span class="text-gray-500 text-sm">No languages added yet.</span>';
+          }
+          
+          // Hide edit form, show view mode
+          document.getElementById('about-edit-mode').classList.add('hidden');
+          document.getElementById('about-view-mode').classList.remove('hidden');
+          
+          // Show success notification
+          if (window.showNotification) {
+            window.showNotification('Profile information updated successfully', 'success');
+          }
+          
+        } catch (error) {
+          console.error('Error updating about info:', error);
+          
+          // Show error notification
+          if (window.showNotification) {
+            window.showNotification(error.message || 'Failed to update profile information', 'error');
+          }
+        }
+      }
+      
+      // Upload avatar
+      async function uploadAvatar() {
+        try {
+          const fileInput = document.getElementById('avatar-input');
+          if (!fileInput.files || !fileInput.files[0]) {
+            throw new Error('Please select an image');
+          }
+          
+          const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+          const token = localStorage.getItem('token');
+          const userId = localStorage.getItem('userId');
+          
+          if (!token || !userId) {
+            throw new Error('Authentication required');
+          }
+          
+          const file = fileInput.files[0];
+          
+          // Check file size
+          if (file.size > 2 * 1024 * 1024) {
+            throw new Error('File size must be less than 2MB');
+          }
+          
+          // Check file type
+          if (!file.type.match('image.*')) {
+            throw new Error('Only image files are allowed');
+          }
+          
+          // Create form data
+          const formData = new FormData();
+          formData.append('avatar', file);
+          
+          // Send update request
+          const response = await fetch(`${API_URL}/api/users/${userId}/avatar`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            body: formData
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to upload avatar');
+          }
+          
+          const result = await response.json();
+          const avatarUrl = result.avatarUrl;
+          
+          // Update avatar in UI
+          const profileAvatar = document.getElementById('profile-avatar');
+          const userAvatar = document.getElementById('user-avatar');
+          
+          if (profileAvatar) {
+            profileAvatar.innerHTML = `<img src="${avatarUrl}" alt="Profile" class="w-full h-full object-cover rounded-full">`;
+          }
+          
+          if (userAvatar) {
+            userAvatar.innerHTML = `<img src="${avatarUrl}" alt="User" class="w-full h-full object-cover rounded-full">`;
+          }
+          
+          // Close modal
+          document.getElementById('avatar-modal').classList.add('hidden');
+          
+          // Show success notification
+          if (window.showNotification) {
+            window.showNotification('Avatar updated successfully', 'success');
+          }
+          
+        } catch (error) {
+          console.error('Error uploading avatar:', error);
+          
+          // Show error notification
+          if (window.showNotification) {
+            window.showNotification(error.message || 'Failed to upload avatar', 'error');
+          }
+        }
+      }
+      
+      // Upload cover image
+      async function uploadCover() {
+        try {
+          const fileInput = document.getElementById('cover-input');
+          if (!fileInput.files || !fileInput.files[0]) {
+            throw new Error('Please select an image');
+          }
+          
+          const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+          const token = localStorage.getItem('token');
+          const userId = localStorage.getItem('userId');
+          
+          if (!token || !userId) {
+            throw new Error('Authentication required');
+          }
+          
+          const file = fileInput.files[0];
+          
+          // Check file size
+          if (file.size > 4 * 1024 * 1024) {
+            throw new Error('File size must be less than 4MB');
+          }
+          
+          // Check file type
+          if (!file.type.match('image.*')) {
+            throw new Error('Only image files are allowed');
+          }
+          
+          // Create form data
+          const formData = new FormData();
+          formData.append('cover', file);
+          
+          // Send update request
+          const response = await fetch(`${API_URL}/api/users/${userId}/cover`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            body: formData
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to upload cover image');
+          }
+          
+          const result = await response.json();
+          const coverUrl = result.coverUrl;
+          
+          // Update cover image in UI
+          const coverContainer = document.querySelector('.h-32.bg-gradient-to-r') || document.querySelector('.h-32');
+          
+          if (coverContainer) {
+            coverContainer.style.backgroundImage = `url(${coverUrl})`;
+            coverContainer.style.backgroundSize = 'cover';
+            coverContainer.style.backgroundPosition = 'center';
+            coverContainer.classList.remove('bg-gradient-to-r', 'from-blue-400', 'to-primary');
+          }
+          
+          // Close modal
+          document.getElementById('cover-modal').classList.add('hidden');
+          
+          // Show success notification
+          if (window.showNotification) {
+            window.showNotification('Cover image updated successfully', 'success');
+          }
+          
+        } catch (error) {
+          console.error('Error uploading cover:', error);
+          
+          // Show error notification
+          if (window.showNotification) {
+            window.showNotification(error.message || 'Failed to upload cover image', 'error');
+          }
+        }
+      }
+      
+      // Change password
+      async function changePassword() {
+        try {
+          const currentPassword = document.getElementById('current-password').value;
+          const newPassword = document.getElementById('new-password').value;
+          const confirmPassword = document.getElementById('confirm-password').value;
+          
+          if (!currentPassword || !newPassword || !confirmPassword) {
+            throw new Error('All password fields are required');
+          }
+          
+          if (newPassword.length < 8) {
+            throw new Error('New password must be at least 8 characters long');
+          }
+          
+          if (newPassword !== confirmPassword) {
+            throw new Error('Passwords do not match');
+          }
+          
+          const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+          const token = localStorage.getItem('token');
+          const userId = localStorage.getItem('userId');
+          
+          if (!token || !userId) {
+            throw new Error('Authentication required');
+          }
+          
+          // Send update request
+          const response = await fetch(`${API_URL}/api/users/${userId}/password`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              currentPassword,
+              newPassword
+            })
+          });
+          
+          if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.message || 'Failed to change password');
+          }
+          
+          // Close modal and reset form
+          document.getElementById('password-modal').classList.add('hidden');
+          document.getElementById('password-form').reset();
+          
+          // Show success notification
+          if (window.showNotification) {
+            window.showNotification('Password changed successfully', 'success');
+          }
+          
+        } catch (error) {
+          console.error('Error changing password:', error);
+          
+          // Show error notification
+          if (window.showNotification) {
+            window.showNotification(error.message || 'Failed to change password', 'error');
+          }
+        }
+      }
+      
+      // Deactivate account
+      async function deactivateAccount() {
+        try {
+          const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+          const token = localStorage.getItem('token');
+          const userId = localStorage.getItem('userId');
+          
+          if (!token || !userId) {
+            throw new Error('Authentication required');
+          }
+          
+          // Send deactivation request
+          const response = await fetch(`${API_URL}/api/users/${userId}/deactivate`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to deactivate account');
+          }
+          
+          // Log out user
+          logout();
+          
+          // Show success message
+          alert('Your account has been deactivated. You have been logged out.');
+          
+          // Redirect to home page
+          window.location.href = 'index.html';
+          
+        } catch (error) {
+          console.error('Error deactivating account:', error);
+          
+          // Close modal
+          document.getElementById('deactivate-modal').classList.add('hidden');
+          
+          // Show error notification
+          if (window.showNotification) {
+            window.showNotification(error.message || 'Failed to deactivate account', 'error');
+          }
+        }
+      }
+      
+      // Load user reviews
+      async function loadReviews() {
+        try {
+          const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+          const userId = localStorage.getItem('userId');
+          
+          if (!userId) return;
+          
+          const reviewsLoading = document.getElementById('reviews-loading');
+          const reviewsList = document.getElementById('reviews-list');
+          const noReviews = document.getElementById('no-reviews');
+          const reviewsPagination = document.getElementById('reviews-pagination');
+          
+          if (!reviewsLoading || !reviewsList || !noReviews) return;
+          
+          reviewsLoading.classList.remove('hidden');
+          reviewsList.classList.add('hidden');
+          noReviews.classList.add('hidden');
+          
+          // Fetch reviews
+          const response = await fetch(`${API_URL}/api/users/${userId}/reviews`);
+          
+          if (!response.ok) {
+            throw new Error('Failed to load reviews');
+          }
+          
+          const reviews = await response.json();
+          
+          // Hide loading
+          reviewsLoading.classList.add('hidden');
+          
+          if (!reviews || reviews.length === 0) {
+            noReviews.classList.remove('hidden');
+            return;
+          }
+          
+          // Show reviews
+          reviewsList.classList.remove('hidden');
+          reviewsList.innerHTML = '';
+          
+          reviews.forEach(review => {
+            const reviewElement = createReviewElement(review);
+            reviewsList.appendChild(reviewElement);
+          });
+          
+          // Show pagination if necessary
+          if (reviews.length > 5) {
+            reviewsPagination.classList.remove('hidden');
+            // Pagination logic would go here
+          }
+          
+        } catch (error) {
+          console.error('Error loading reviews:', error);
+          
+          const reviewsLoading = document.getElementById('reviews-loading');
+          const reviewsList = document.getElementById('reviews-list');
+          const noReviews = document.getElementById('no-reviews');
+          
+          if (reviewsLoading) reviewsLoading.classList.add('hidden');
+          if (reviewsList) reviewsList.innerHTML = `<div class="text-center py-4"><p class="text-red-500">Failed to load reviews</p></div>`;
+          if (reviewsList) reviewsList.classList.remove('hidden');
+          if (noReviews) noReviews.classList.add('hidden');
+        }
+      }
+      
+      // Create review element
+      function createReviewElement(review) {
+        const div = document.createElement('div');
+        div.className = 'py-4';
+        
+        const formattedDate = review.createdAt ? new Date(review.createdAt).toLocaleDateString() : 'Recent';
+        
+        div.innerHTML = `
+          <div class="flex items-start">
+            <div class="mr-4">
+              <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                ${review.reviewerName ? review.reviewerName.charAt(0).toUpperCase() : 'A'}
+              </div>
+            </div>
+            <div class="flex-1">
+              <div class="flex justify-between items-start mb-1">
+                <div>
+                  <h4 class="font-medium">${review.reviewerName || 'Anonymous'}</h4>
+                  <div class="flex items-center text-yellow-400">
+                    ${generateStarRating(review.rating)}
+                  </div>
+                </div>
+                <span class="text-sm text-gray-500">${formattedDate}</span>
+              </div>
+              <p class="text-gray-600 mt-2">${review.comment || ''}</p>
+            </div>
+          </div>
+        `;
+        
+        return div;
+      }
+      
+      // Generate star rating HTML
+      function generateStarRating(rating) {
+        const fullStars = Math.floor(rating);
+        const halfStar = rating % 1 >= 0.5;
+        const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
+        
+        let html = '';
+        
+        // Full stars
+        for (let i = 0; i < fullStars; i++) {
+          html += '<i class="fas fa-star"></i>';
+        }
+        
+        // Half star
+        if (halfStar) {
+          html += '<i class="fas fa-star-half-alt"></i>';
+        }
+        
+        // Empty stars
+        for (let i = 0; i < emptyStars; i++) {
+          html += '<i class="far fa-star"></i>';
+        }
+        
+        return html;
+      }
+      
+      // Load user activity timeline
+      async function loadActivity() {
+        try {
+          const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+          const userId = localStorage.getItem('userId');
+          const token = localStorage.getItem('token');
+          
+          if (!userId || !token) return;
+          
+          const activityLoading = document.getElementById('activity-loading');
+          const activityTimeline = document.getElementById('activity-timeline');
+          const noActivity = document.getElementById('no-activity');
+          
+          if (!activityLoading || !activityTimeline || !noActivity) return;
+          
+          activityLoading.classList.remove('hidden');
+          activityTimeline.classList.add('hidden');
+          noActivity.classList.add('hidden');
+          
+          // Fetch activity
+          const response = await fetch(`${API_URL}/api/users/${userId}/activity`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to load activity');
+          }
+          
+          const activities = await response.json();
+          
+          // Hide loading
+          activityLoading.classList.add('hidden');
+          
+          if (!activities || activities.length === 0) {
+            noActivity.classList.remove('hidden');
+            return;
+          }
+          
+          // Show activity timeline
+          activityTimeline.classList.remove('hidden');
+          activityTimeline.innerHTML = '';
+          
+          activities.forEach(activity => {
+            const activityElement = createActivityElement(activity);
+            activityTimeline.appendChild(activityElement);
+          });
+          
+        } catch (error) {
+          console.error('Error loading activity:', error);
+          
+          const activityLoading = document.getElementById('activity-loading');
+          const activityTimeline = document.getElementById('activity-timeline');
+          const noActivity = document.getElementById('no-activity');
+          
+          if (activityLoading) activityLoading.classList.add('hidden');
+          if (activityTimeline) activityTimeline.innerHTML = `<div class="text-center py-4"><p class="text-red-500">Failed to load activity</p></div>`;
+          if (activityTimeline) activityTimeline.classList.remove('hidden');
+          if (noActivity) noActivity.classList.add('hidden');
+        }
+      }
+      
+      // Create activity element
+      function createActivityElement(activity) {
+        const div = document.createElement('div');
+        div.className = 'relative pl-8 pb-6';
+        
+        // Format date
+        const formattedDate = activity.createdAt ? new Date(activity.createdAt).toLocaleDateString() : 'Recent';
+        const timeAgo = activity.createdAt ? getTimeAgo(new Date(activity.createdAt)) : 'Recently';
+        
+        // Determine icon and color based on activity type
+        let icon = 'fa-circle';
+        let color = 'bg-blue-500';
+        let borderColor = 'border-blue-500';
+        
+        switch (activity.type) {
+          case 'TASK_CREATED':
+            icon = 'fa-clipboard-list';
+            color = 'bg-blue-500';
+            borderColor = 'border-blue-500';
+            break;
+          case 'TASK_UPDATED':
+            icon = 'fa-edit';
+            color = 'bg-purple-500';
+            borderColor = 'border-purple-500';
+            break;
+          case 'TASK_COMPLETED':
+            icon = 'fa-check-circle';
+            color = 'bg-green-500';
+            borderColor = 'border-green-500';
+            break;
+          case 'OFFER_MADE':
+            icon = 'fa-handshake';
+            color = 'bg-yellow-500';
+            borderColor = 'border-yellow-500';
+            break;
+          case 'OFFER_ACCEPTED':
+            icon = 'fa-check';
+            color = 'bg-green-500';
+            borderColor = 'border-green-500';
+            break;
+          case 'REVIEW_RECEIVED':
+            icon = 'fa-star';
+            color = 'bg-yellow-500';
+            borderColor = 'border-yellow-500';
+            break;
+        }
+        
+        // Style for the activity line
+        const isLast = activity.isLast;
+        const timelineStyle = isLast ? '' : 'before:absolute before:left-4 before:top-8 before:-bottom-0 before:w-0.5 before:bg-gray-200';
+        
+        div.innerHTML = `
+          <div class="${timelineStyle} relative">
+            <div class="absolute left-0 top-0 w-8 h-8 ${color} rounded-full flex items-center justify-center">
+              <i class="fas ${icon} text-white text-sm"></i>
+            </div>
+            <div>
+              <p class="font-medium text-gray-900">${activity.title || 'Activity'}</p>
+              <p class="text-sm text-gray-600 mb-1">${activity.description || ''}</p>
+              <div class="flex items-center text-xs text-gray-500">
+                <span title="${formattedDate}">${timeAgo}</span>
+                ${activity.taskId ? `
+                  <span class="mx-1">•</span>
+                  <a href="task-detail.html?id=${activity.taskId}" class="text-primary hover:underline">View Task</a>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+        
+        return div;
+      }
+      
+      // Get time ago string
+      function getTimeAgo(date) {
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+        
+        if (diffInSeconds < 60) {
+          return 'Just now';
+        }
+        
+        const diffInMinutes = Math.floor(diffInSeconds / 60);
+        if (diffInMinutes < 60) {
+          return `${diffInMinutes}m ago`;
+        }
+        
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        if (diffInHours < 24) {
+          return `${diffInHours}h ago`;
+        }
+        
+        const diffInDays = Math.floor(diffInHours / 24);
+        if (diffInDays < 30) {
+          return `${diffInDays}d ago`;
+        }
+        
+        const diffInMonths = Math.floor(diffInDays / 30);
+        if (diffInMonths < 12) {
+          return `${diffInMonths}mo ago`;
+        }
+        
+        const diffInYears = Math.floor(diffInMonths / 12);
+        return `${diffInYears}y ago`;
+      }
+      
+      // Logout function
+      function logout() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('userEmail');
+        
+        window.location.href = 'login.html';
+      }
+    </script>
+  </body>
+</html>

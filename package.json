@@ -1,0 +1,21 @@
+{
+  "name": "victor-task-app",
+  "version": "1.0.0",
+  "description": "Victor - Connect for Tasks",
+  "main": "js/api-server.js",
+  "scripts": {
+    "start": "node js/api-server.js",
+    "dev": "nodemon js/api-server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "body-parser": "^1.20.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  },
+  "author": "",
+  "license": "MIT"
+}

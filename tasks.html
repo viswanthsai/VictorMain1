@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browse Tasks - Victor</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Config script -->
+  <script src="js/config.js"></script>
+  <script src="js/notification.js"></script>
+  <script src="js/task-utils.js"></script>
+  <!-- Configure Tailwind -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              DEFAULT: '#1a73e8',
+              dark: '#1557b0',
+              light: '#e8f0fe',
+            },
+            secondary: '#5f6368',
+            success: '#0d904f',
+            warning: '#f9ab00',
+            danger: '#d93025',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .task-card {
+      transition: all 0.3s ease;
+    }
+    .task-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    }
+    .status-pill {
+      transition: all 0.2s ease;
+    }
+    .status-pill:hover {
+      transform: translateY(-2px);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    .animate-delay-1 { animation-delay: 0.1s; }
+    .animate-delay-2 { animation-delay: 0.2s; }
+    .animate-delay-3 { animation-delay: 0.3s; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+  <!-- Header -->
+  <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-50">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between py-3">
+        <a class="text-primary font-bold text-2xl flex items-center" href="index.html">
+          <span class="bg-gradient-to-r from-primary to-blue-600 text-white p-1.5 rounded mr-1.5 flex items-center justify-center w-8 h-8">V</span>ictor
+        </a>
+        
+        <!-- Search bar - desktop -->
+        <div class="hidden md:flex flex-grow max-w-xl mx-8">
+          <div class="relative w-full">
+            <input type="text" placeholder="Search tasks..." id="search-input" class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-search text-gray-400"></i>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Mobile menu button -->
+        <button class="md:hidden text-gray-600 focus:outline-none" id="mobile-menu-button" title="Toggle mobile menu" aria-label="Toggle mobile menu">
+          <i class="fas fa-bars text-xl"></i>
+        </button>
+        
+        <!-- Desktop nav menu -->
+        <nav class="hidden md:flex items-center space-x-1">
+          <a href="index.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Home</a>
+          <a href="tasks.html" class="px-3 py-2 text-primary bg-primary-light rounded-md transition-colors">Browse Tasks</a>
+          <a href="post-task.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Post a Task</a>
+          
+          <!-- Notifications dropdown -->
+          <div class="relative">
+            <button class="p-2 text-gray-600 hover:text-primary rounded-full hover:bg-gray-100 relative" id="notifications-button">
+              <i class="fas fa-bell"></i>
+              <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full" id="notifications-count">0</span>
+            </button>
+            <div class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg py-1 z-10 hidden border border-gray-100" id="notifications-dropdown">
+              <div class="px-4 py-3 border-b border-gray-100">
+                <h3 class="font-semibold text-gray-900">Notifications</h3>
+              </div>
+              <div class="max-h-64 overflow-y-auto" id="notifications-container">
+                <div class="text-center py-4 text-gray-500">No notifications yet</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- User dropdown -->
+          <div class="relative" id="user-menu-container">
+            <button class="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-full transition-colors" id="user-menu-button">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-400 to-blue-500 text-white flex items-center justify-center font-bold mr-2" id="user-avatar">V</div>
+              <span class="font-medium mr-1" id="username-display">User</span>
+              <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+            </button>
+            <div class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-1 z-10 hidden border border-gray-100" id="user-dropdown">
+              <div class="px-4 py-3 border-b border-gray-100">
+                <p class="text-sm font-medium text-gray-900" id="user-name-dropdown">User</p>
+                <p class="text-sm text-gray-500 truncate" id="user-email-dropdown">user@example.com</p>
+              </div>
+              <a href="dashboard.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-tachometer-alt w-5 text-gray-400 mr-2"></i> Dashboard
+              </a>
+              <a href="profile.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-user-circle w-5 text-gray-400 mr-2"></i> My Profile
+              </a>
+              <a href="accepted-tasks.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-check-circle w-5 text-gray-400 mr-2"></i> Tasks I'm Working On
+              </a>
+              <div class="border-t border-gray-100 my-1"></div>
+              <a href="#" id="logout-button" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-sign-out-alt w-5 text-gray-400 mr-2"></i> Logout
+              </a>
+            </div>
+          </div>
+          
+          <!-- Login/Signup options (visible when logged out) -->
+          <div class="flex items-center space-x-2" id="auth-buttons">
+            <a class="px-4 py-2 text-gray-700 font-medium hover:text-primary transition-colors" href="login.html" id="login-menu-item">
+              Log In
+            </a>
+            <a class="px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors" href="signup.html" id="signup-menu-item">
+              Sign Up
+            </a>
+          </div>
+        </nav>
+      </div>
+    </div>
+    
+    <!-- Mobile menu (hidden by default) -->
+    <div class="md:hidden bg-white border-t border-gray-100 px-4 py-2 hidden" id="mobile-menu">
+      <!-- Mobile search -->
+      <div class="relative mb-4">
+        <input type="text" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <i class="fas fa-search text-gray-400"></i>
+        </div>
+      </div>
+      
+      <div class="flex flex-col space-y-1">
+        <a href="index.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Home</a>
+        <a href="tasks.html" class="px-2 py-2 bg-primary-light text-primary rounded-md">Browse Tasks</a>
+        <a href="post-task.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Post a Task</a>
+        <div class="border-t border-gray-100 my-1 pt-1" id="mobile-auth-links">
+          <a href="login.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Log In</a>
+          <a href="signup.html" class="px-2 py-2 text-primary font-medium">Create an Account</a>
+        </div>
+        <div id="mobile-user-links" class="hidden">
+          <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="dashboard.html">
+            <i class="fas fa-tachometer-alt w-5 mr-2 text-gray-400"></i> Dashboard
+          </a>
+          <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="profile.html">
+            <i class="fas fa-user w-5 mr-2 text-gray-400"></i> My Profile
+          </a>
+          <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="accepted-tasks.html">
+            <i class="fas fa-check-circle w-5 mr-2 text-gray-400"></i> Tasks I'm Working On
+          </a>
+          <div class="border-t border-gray-100 my-1"></div>
+          <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="#" id="mobile-logout-button">
+            <i class="fas fa-sign-out-alt w-5 mr-2 text-gray-400"></i> Logout
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="pt-16 pb-12">
+    <div class="container mx-auto px-4">
+      <!-- Page header -->
+      <div class="py-6 md:py-8 lg:flex lg:items-center lg:justify-between">
+        <div class="lg:flex-1 min-w-0">
+          <h1 class="text-2xl font-bold text-gray-900 sm:text-3xl">Browse Available Tasks</h1>
+          <p class="text-sm text-gray-600 mt-1">Find tasks that match your skills and availability</p>
+        </div>
+        <div class="mt-4 lg:mt-0">
+          <a href="post-task.html" class="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
+            <i class="fas fa-plus-circle mr-2"></i>Post Your Own Task
+          </a>
+        </div>
+      </div>
+
+      <!-- Filters section -->
+      <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+        <div class="flex flex-wrap gap-4 justify-between">
+          <div class="flex flex-wrap gap-3">
+            <!-- Category dropdown -->
+            <div class="relative inline-block">
+  <label for="category-filter" class="block text-xs font-medium text-gray-700 mb-1">Category</label>
+  <div class="relative">
+    <select id="category-filter" class="appearance-none w-full bg-white border border-gray-300 hover:border-gray-400 px-4 py-2 pr-8 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary cursor-pointer text-gray-700">
+      <option value="">All Categories</option>
+      <option value="Home Services">Home Services</option>
+      <option value="Auto & Transportation">Auto & Transportation</option>
+      <option value="Healthcare & Wellness">Healthcare & Wellness</option>
+      <option value="Beauty & Grooming">Beauty & Grooming</option>
+      <option value="Education & Training">Education & Training</option>
+      <option value="Event & Wedding">Event & Wedding</option>
+      <option value="Repair & Maintenance">Repair & Maintenance</option>
+      <option value="IT & Tech">IT & Tech</option>
+      <option value="Childcare & Babysitting">Childcare & Babysitting</option>
+      <option value="Moving & Shifting">Moving & Shifting</option>
+      <option value="Photography & Media">Photography & Media</option>
+      <option value="Professional Services">Professional Services</option>
+      <option value="Other">Other</option>
+    </select>
+    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+      <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+            
+            <!-- Location filter -->
+<div class="relative inline-block">
+  <label for="location-filter" class="block text-xs font-medium text-gray-700 mb-1">Location</label>
+  <div class="relative">
+    <select id="location-filter" class="appearance-none w-full bg-white border border-gray-300 hover:border-gray-400 px-4 py-2 pr-8 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary cursor-pointer text-gray-700">
+      <option value="">Any Location</option>
+      <option value="Remote">Remote</option>
+      <option value="Delhi">Delhi</option>
+      <option value="Mumbai">Mumbai</option>
+      <option value="Bangalore">Bangalore</option>
+      <option value="Hyderabad">Hyderabad</option>
+      <option value="Chennai">Chennai</option>
+      <option value="Kolkata">Kolkata</option>
+      <option value="Pune">Pune</option>
+      <option value="Ahmedabad">Ahmedabad</option>
+      <option value="Jaipur">Jaipur</option>
+      <option value="Surat">Surat</option>
+      <option value="Lucknow">Lucknow</option>
+      <option value="Kanpur">Kanpur</option>
+      <option value="Nagpur">Nagpur</option>
+    </select>
+    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+      <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+            
+            <!-- Budget range -->
+<div class="relative inline-block">
+  <label class="block text-xs font-medium text-gray-700 mb-1">Budget Range (₹)</label>
+  <div class="flex items-center">
+    <div class="relative">
+      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <span class="text-gray-500">₹</span>
+      </div>
+      <input type="number" id="min-budget" placeholder="Min" 
+        class="pl-7 pr-3 py-2 border border-gray-300 hover:border-gray-400 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-gray-700 w-24 shadow-sm">
+    </div>
+    <div class="border-t border-b border-gray-300 bg-gray-50 flex items-center justify-center px-2 py-2">
+      <span class="text-gray-500">to</span>
+    </div>
+    <div class="relative">
+      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <span class="text-gray-500">₹</span>
+      </div>
+      <input type="number" id="max-budget" placeholder="Max" 
+        class="pl-7 pr-3 py-2 border border-gray-300 hover:border-gray-400 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-gray-700 w-24 shadow-sm">
+    </div>
+  </div>
+</div>
+
+          </div>
+          
+          <!-- Sort options -->
+<div class="relative inline-block">
+  <label for="sort-options" class="block text-xs font-medium text-gray-700 mb-1">Sort By</label>
+  <div class="relative">
+    <select id="sort-options" 
+      class="appearance-none bg-white border border-gray-300 hover:border-gray-400 px-4 py-2 pr-8 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary cursor-pointer text-gray-700">
+      <option value="newest">Newest First</option>
+      <option value="oldest">Oldest First</option>
+      <option value="budget-high">Budget: High to Low</option>
+      <option value="budget-low">Budget: Low to High</option>
+    </select>
+    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+      <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+        </div>
+        
+        <!-- Applied filters (hidden initially) -->
+        <div id="applied-filters" class="mt-3 flex flex-wrap gap-2 hidden">
+          <!-- Filter tags will be added here -->
+        </div>
+      </div>
+      
+      <!-- Popular locations -->
+<div class="bg-white rounded-xl shadow-sm p-5 mb-6">
+  <div class="flex flex-wrap items-center">
+    <div class="mr-3 mb-2">
+      <span class="font-medium text-gray-700">Popular:</span>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button type="button" class="location-chip px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700 hover:bg-primary hover:text-white hover:border-primary transition-colors flex items-center" data-location="Remote">
+        <i class="fas fa-wifi mr-1.5 text-xs"></i>Remote
+      </button>
+      <button type="button" class="location-chip px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700 hover:bg-primary hover:text-white hover:border-primary transition-colors flex items-center" data-location="Delhi">
+        <i class="fas fa-map-marker-alt mr-1.5 text-xs"></i>Delhi
+      </button>
+      <button type="button" class="location-chip px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700 hover:bg-primary hover:text-white hover:border-primary transition-colors flex items-center" data-location="Mumbai">
+        <i class="fas fa-map-marker-alt mr-1.5 text-xs"></i>Mumbai
+      </button>
+      <button type="button" class="location-chip px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700 hover:bg-primary hover:text-white hover:border-primary transition-colors flex items-center" data-location="Bangalore">
+        <i class="fas fa-map-marker-alt mr-1.5 text-xs"></i>Bangalore
+      </button>
+      <button type="button" class="location-chip px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700 hover:bg-primary hover:text-white hover:border-primary transition-colors flex items-center" data-location="Hyderabad">
+        <i class="fas fa-map-marker-alt mr-1.5 text-xs"></i>Hyderabad
+      </button>
+      <button type="button" class="location-chip px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700 hover:bg-primary hover:text-white hover:border-primary transition-colors flex items-center" data-location="Chennai">
+        <i class="fas fa-map-marker-alt mr-1.5 text-xs"></i>Chennai
+      </button>
+      <button type="button" class="location-chip px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700 hover:bg-primary hover:text-white hover:border-primary transition-colors flex items-center" data-location="Kolkata">
+        <i class="fas fa-map-marker-alt mr-1.5 text-xs"></i>Kolkata
+      </button>
+      <button type="button" class="location-chip px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700 hover:bg-primary hover:text-white hover:border-primary transition-colors flex items-center" data-location="Pune">
+        <i class="fas fa-map-marker-alt mr-1.5 text-xs"></i>Pune
+      </button>
+    </div>
+  </div>
+</div>
+
+      <!-- Loading state -->
+      <div id="loading-container" class="text-center py-12">
+        <div class="inline-block w-12 h-12 border-4 border-gray-200 border-t-primary rounded-full animate-spin mb-4"></div>
+        <p class="text-gray-500">Loading tasks...</p>
+      </div>
+      
+      <!-- Tasks grid -->
+      <div id="tasks-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
+        <!-- Task cards will be inserted here by JavaScript -->
+      </div>
+      
+      <!-- Empty state (hidden by default) -->
+      <div id="empty-container" class="bg-white rounded-xl shadow-sm p-12 text-center hidden">
+        <div class="inline-block p-6 rounded-full bg-gray-100 mb-4">
+          <i class="fas fa-clipboard-list text-gray-400 text-4xl"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-2">No tasks found</h3>
+        <p class="text-gray-600 mb-6 max-w-md mx-auto">Try adjusting your filters or check back later for new tasks.</p>
+        <button id="reset-filters" class="bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-lg inline-flex items-center">
+          <i class="fas fa-undo mr-2"></i>Reset Filters
+        </button>
+      </div>
+      
+      <!-- Error state (hidden by default) -->
+      <div id="error-container" class="bg-red-50 rounded-xl shadow-sm p-12 text-center hidden">
+        <div class="inline-block p-6 rounded-full bg-red-100 mb-4">
+          <i class="fas fa-exclamation-triangle text-red-500 text-4xl"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-2">Couldn't load tasks</h3>
+        <p class="text-gray-600 mb-6 max-w-md mx-auto">We encountered a problem while loading tasks. Please try again.</p>
+        <button id="retry-button" class="bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-lg inline-flex items-center">
+          <i class="fas fa-sync mr-2"></i>Try Again
+        </button>
+      </div>
+      
+      <!-- Load more button (hidden initially) -->
+      <div id="load-more-container" class="text-center mt-8 hidden">
+        <button id="load-more-button" class="bg-white hover:bg-gray-50 text-primary border border-gray-200 px-6 py-3 rounded-lg inline-flex items-center transition-colors">
+          <i class="fas fa-spinner mr-2"></i>Load More Tasks
+        </button>
+      </div>
+    </div>
+  </main>
+  
+  <footer class="bg-gray-800 text-white py-8">
+    <div class="container mx-auto px-4">
+      <div class="grid md:grid-cols-4 gap-8">
+        <div>
+          <a class="text-white font-bold text-2xl flex items-center mb-4" href="index.html">
+            <span class="bg-white text-primary p-1 rounded mr-1.5 flex items-center justify-center w-8 h-8">V</span>ictor
+          </a>
+          <p class="text-gray-300 mb-4">Connecting people for tasks - anytime, anywhere. Get help or help others.</p>
+          <div class="flex space-x-4">
+            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-twitter"></i></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-instagram"></i></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-linkedin-in"></i></a>
+          </div>
+        </div>
+        
+        <div>
+          <h4 class="font-semibold mb-4 text-lg">For Task Posters</h4>
+          <ul class="space-y-2">
+            <li><a href="post-task.html" class="text-gray-300 hover:text-white transition-colors">Post a Task</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">How it Works</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Pricing</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">FAQ</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 class="font-semibold mb-4 text-lg">For Task Performers</h4>
+          <ul class="space-y-2">
+            <li><a href="tasks.html" class="text-gray-300 hover:text-white transition-colors">Browse Tasks</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Task Categories</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Earn Money</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Success Stories</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 class="font-semibold mb-4 text-lg">Support</h4>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Help Center</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Contact Us</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Privacy Policy</a></li>
+            <li><a href="server-status.html" class="text-gray-300 hover:text-white transition-colors">Server Status</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center">
+        <p class="text-gray-300">© 2023 Victor - Connect for Tasks. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Get API URL from config
+      const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+      
+      // Mobile menu toggle
+      document.getElementById('mobile-menu-button').addEventListener('click', function() {
+        document.getElementById('mobile-menu').classList.toggle('hidden');
+      });
+      
+      // Check if user is logged in
+      checkLoginStatus();
+      
+      // User dropdown toggle
+      setupUserDropdown();
+      
+      // Notifications dropdown toggle
+      setupNotificationsDropdown();
+      
+      // Load tasks
+      loadTasks();
+      
+      // Setup event listeners for filters
+      setupFilters();
+      
+      // Retry button
+      const retryButton = document.getElementById('retry-button');
+      if (retryButton) {
+        retryButton.addEventListener('click', loadTasks);
+      }
+      
+      // Reset filters button
+      const resetFiltersButton = document.getElementById('reset-filters');
+      if (resetFiltersButton) {
+        resetFiltersButton.addEventListener('click', resetFilters);
+      }
+    });
+    
+    // Check login status and update UI accordingly
+    function checkLoginStatus() {
+      const token = localStorage.getItem('token');
+      const username = localStorage.getItem('username');
+      const userEmail = localStorage.getItem('userEmail');
+      
+      const authButtons = document.getElementById('auth-buttons');
+      const userMenuContainer = document.getElementById('user-menu-container');
+      const mobileAuthLinks = document.getElementById('mobile-auth-links');
+      const mobileUserLinks = document.getElementById('mobile-user-links');
+      
+      if (token) {
+        // User is logged in
+        if (authButtons) authButtons.classList.add('hidden');
+        if (userMenuContainer) userMenuContainer.classList.remove('hidden');
+        if (mobileAuthLinks) mobileAuthLinks.classList.add('hidden');
+        if (mobileUserLinks) mobileUserLinks.classList.remove('hidden');
+        
+        // Update user info
+        const usernameDisplay = document.getElementById('username-display');
+        const userNameDropdown = document.getElementById('user-name-dropdown');
+        const userEmailDropdown = document.getElementById('user-email-dropdown');
+        const userAvatar = document.getElementById('user-avatar');
+        
+        if (usernameDisplay && username) usernameDisplay.textContent = username;
+        if (userNameDropdown && username) userNameDropdown.textContent = username;
+        if (userEmailDropdown && userEmail) userEmailDropdown.textContent = userEmail;
+        if (userAvatar && username) userAvatar.textContent = username.charAt(0).toUpperCase();
+        
+        // Setup logout buttons
+        const logoutButton = document.getElementById('logout-button');
+        const mobileLogoutButton = document.getElementById('mobile-logout-button');
+        
+        if (logoutButton) {
+          logoutButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            logout();
+          });
+        }
+        
+        if (mobileLogoutButton) {
+          mobileLogoutButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            logout();
+          });
+        }
+      } else {
+        // User is not logged in
+        if (authButtons) authButtons.classList.remove('hidden');
+        if (userMenuContainer) userMenuContainer.classList.add('hidden');
+        if (mobileAuthLinks) mobileAuthLinks.classList.remove('hidden');
+        if (mobileUserLinks) mobileUserLinks.classList.add('hidden');
+      }
+    }
+    
+    // Setup user dropdown
+    function setupUserDropdown() {
+      const userMenuButton = document.getElementById('user-menu-button');
+      const userDropdown = document.getElementById('user-dropdown');
+      
+      if (userMenuButton && userDropdown) {
+        userMenuButton.addEventListener('click', function(e) {
+          e.stopPropagation();
+          userDropdown.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+          if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
+            userDropdown.classList.add('hidden');
+          }
+        });
+      }
+    }
+    
+    // Setup notifications dropdown
+    function setupNotificationsDropdown() {
+      const notificationsButton = document.getElementById('notifications-button');
+      const notificationsDropdown = document.getElementById('notifications-dropdown');
+      
+      if (notificationsButton && notificationsDropdown) {
+        notificationsButton.addEventListener('click', function(e) {
+          e.stopPropagation();
+          notificationsDropdown.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+          if (!notificationsButton.contains(event.target) && !notificationsDropdown.contains(event.target)) {
+            notificationsDropdown.classList.add('hidden');
+          }
+        });
+      }
+    }
+    
+    // Logout function
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userEmail');
+      
+      window.location.reload();
+    }
+    
+    // Global variables for filtering
+    let allTasks = [];
+    let displayedTasks = [];
+    let currentPage = 1;
+    const tasksPerPage = 12;
+    
+    // Load tasks from API
+    async function loadTasks() {
+      const loadingContainer = document.getElementById('loading-container');
+      const tasksContainer = document.getElementById('tasks-container');
+      const emptyContainer = document.getElementById('empty-container');
+      const errorContainer = document.getElementById('error-container');
+      const loadMoreContainer = document.getElementById('load-more-container');
+      
+      // Show loading state
+      if (loadingContainer) loadingContainer.classList.remove('hidden');
+      if (tasksContainer) tasksContainer.classList.add('hidden');
+      if (emptyContainer) emptyContainer.classList.add('hidden');
+      if (errorContainer) errorContainer.classList.add('hidden');
+      if (loadMoreContainer) loadMoreContainer.classList.add('hidden');
+      
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        
+        // Fetch tasks
+        const response = await fetch(`${API_URL}/api/tasks`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to load tasks: ${response.status}`);
+        }
+        
+        // Parse the response
+        const tasks = await response.json();
+        
+        // Store all tasks
+        allTasks = tasks.filter(task => task.status === 'Open');
+        
+        // Hide loading container
+        if (loadingContainer) loadingContainer.classList.add('hidden');
+        
+        // Apply filters and render tasks
+        applyFiltersAndSort();
+        
+      } catch (error) {
+        console.error('Error loading tasks:', error);
+        
+        // Hide loading and show error state
+        if (loadingContainer) loadingContainer.classList.add('hidden');
+        if (errorContainer) errorContainer.classList.remove('hidden');
+      }
+    }
+    
+    // Setup filter event listeners
+    function setupFilters() {
+      const categoryFilter = document.getElementById('category-filter');
+      const locationFilter = document.getElementById('location-filter');
+      const minBudget = document.getElementById('min-budget');
+      const maxBudget = document.getElementById('max-budget');
+      const sortOptions = document.getElementById('sort-options');
+      const searchInput = document.getElementById('search-input');
+      
+      // Add event listeners to all filter inputs
+      [categoryFilter, locationFilter, minBudget, maxBudget, sortOptions].forEach(element => {
+        if (element) {
+          element.addEventListener('change', function() {
+            currentPage = 1;  // Reset to first page when filters change
+            applyFiltersAndSort();
+          });
+        }
+      });
+      
+      // Add search input handler with debounce
+      if (searchInput) {
+        let debounceTimeout;
+        searchInput.addEventListener('input', function() {
+          clearTimeout(debounceTimeout);
+          debounceTimeout = setTimeout(() => {
+            currentPage = 1;  // Reset to first page when search changes
+            applyFiltersAndSort();
+          }, 300);
+        });
+      }
+      
+      // Check URL parameters for initial filters
+      checkURLParams();
+    }
+    
+    // Check URL parameters for initial filter values
+    function checkURLParams() {
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      // Apply category filter if present in URL
+      const categoryParam = urlParams.get('category');
+      if (categoryParam) {
+        const categoryFilter = document.getElementById('category-filter');
+        if (categoryFilter) {
+          // Try to find the option with this category
+          const options = categoryFilter.options;
+          for (let i = 0; i < options.length; i++) {
+            if (options[i].value === categoryParam) {
+              categoryFilter.selectedIndex = i;
+              break;
+            }
+          }
+        }
+      }
+      
+      // Apply location filter if present in URL
+      const locationParam = urlParams.get('location');
+      if (locationParam) {
+        const locationFilter = document.getElementById('location-filter');
+        if (locationFilter) {
+          locationFilter.value = locationParam;
+        }
+      }
+      
+      // Apply search filter if present in URL
+      const searchParam = urlParams.get('search');
+      if (searchParam) {
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+          searchInput.value = searchParam;
+        }
+      }
+      
+      // Apply other filters here if needed
+    }
+    
+    // Apply filters and sort tasks
+    function applyFiltersAndSort() {
+      const categoryFilter = document.getElementById('category-filter')?.value;
+      const locationFilter = document.getElementById('location-filter')?.value.toLowerCase();
+      const minBudget = document.getElementById('min-budget')?.value;
+      const maxBudget = document.getElementById('max-budget')?.value;
+      const sortOption = document.getElementById('sort-options')?.value;
+      const searchQuery = document.getElementById('search-input')?.value.toLowerCase();
+      
+      // Filter tasks
+      displayedTasks = allTasks.filter(task => {
+        // Category filter
+        if (categoryFilter && task.category !== categoryFilter) {
+          return false;
+        }
+        
+        // Location filter (case insensitive partial match)
+        if (locationFilter && !task.location?.toLowerCase().includes(locationFilter)) {
+          return false;
+        }
+        
+        // Budget filters
+        if (minBudget && (!task.budget || parseInt(task.budget) < parseInt(minBudget))) {
+          return false;
+        }
+        
+        if (maxBudget && (!task.budget || parseInt(task.budget) > parseInt(maxBudget))) {
+          return false;
+        }
+        
+        // Search query (in title and description)
+        if (searchQuery) {
+          const titleMatch = task.title?.toLowerCase().includes(searchQuery);
+          const descriptionMatch = task.description?.toLowerCase().includes(searchQuery);
+          
+          if (!titleMatch && !descriptionMatch) {
+            return false;
+          }
+        }
+        
+        return true;
+      });
+      
+      // Sort tasks
+      if (sortOption) {
+        switch(sortOption) {
+          case 'newest':
+            displayedTasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            break;
+          case 'oldest':
+            displayedTasks.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            break;
+          case 'budget-high':
+            displayedTasks.sort((a, b) => {
+              if (!a.budget) return 1;
+              if (!b.budget) return -1;
+              return parseInt(b.budget) - parseInt(a.budget);
+            });
+            break;
+          case 'budget-low':
+            displayedTasks.sort((a, b) => {
+              if (!a.budget) return 1;
+              if (!b.budget) return -1;
+              return parseInt(a.budget) - parseInt(b.budget);
+            });
+            break;
+        }
+      }
+      
+      // Update active filters display
+      updateActiveFilters(categoryFilter, locationFilter, minBudget, maxBudget, searchQuery);
+      
+      // Render first page of tasks
+      renderTasks();
+    }
+    
+    // Update display of active filters
+    function updateActiveFilters(category, location, minBudget, maxBudget, searchQuery) {
+      const appliedFiltersContainer = document.getElementById('applied-filters');
+      if (!appliedFiltersContainer) return;
+      
+      // Clear existing filters
+      appliedFiltersContainer.innerHTML = '';
+      
+      const activeFilters = [];
+      
+      // Add filters that are applied
+      if (category) {
+        activeFilters.push({ label: `Category: ${category}`, type: 'category' });
+      }
+      
+      if (location) {
+        activeFilters.push({ label: `Location: ${location}`, type: 'location' });
+      }
+      
+      if (minBudget && maxBudget) {
+        activeFilters.push({ label: `Budget: ₹${minBudget} - ₹${maxBudget}`, type: 'budget' });
+      } else if (minBudget) {
+        activeFilters.push({ label: `Budget: ≥ ₹${minBudget}`, type: 'min-budget' });
+      } else if (maxBudget) {
+        activeFilters.push({ label: `Budget: ≤ ₹${maxBudget}`, type: 'max-budget' });
+      }
+      
+      if (searchQuery) {
+        activeFilters.push({ label: `Search: "${searchQuery}"`, type: 'search' });
+      }
+      
+      // If no active filters, hide the container
+      if (activeFilters.length === 0) {
+        appliedFiltersContainer.classList.add('hidden');
+        return;
+      }
+      
+      // Show the container and create filter tags
+      appliedFiltersContainer.classList.remove('hidden');
+      
+      activeFilters.forEach(filter => {
+        const filterTag = document.createElement('div');
+        filterTag.className = 'inline-flex items-center bg-primary-light text-primary rounded-full px-3 py-1 text-sm';
+        filterTag.innerHTML = `
+          ${filter.label}
+          <button class="ml-1 focus:outline-none" data-filter-type="${filter.type}">
+            <i class="fas fa-times-circle"></i>
+          </button>
+        `;
+        
+        // Add click handler to remove the filter
+        const removeButton = filterTag.querySelector('button');
+        removeButton.addEventListener('click', () => {
+          removeFilter(filter.type);
+        });
+        
+        appliedFiltersContainer.appendChild(filterTag);
+      });
+      
+      // Add clear all button if multiple filters
+      if (activeFilters.length > 1) {
+        const clearAllButton = document.createElement('button');
+        clearAllButton.className = 'text-sm text-primary hover:underline ml-2';
+        clearAllButton.textContent = 'Clear All';
+        clearAllButton.addEventListener('click', resetFilters);
+        
+        appliedFiltersContainer.appendChild(clearAllButton);
+      }
+    }
+    
+    // Remove an individual filter
+    function removeFilter(filterType) {
+      switch (filterType) {
+        case 'category':
+          const categoryFilter = document.getElementById('category-filter');
+          if (categoryFilter) categoryFilter.value = '';
+          break;
+        case 'location':
+          const locationFilter = document.getElementById('location-filter');
+          if (locationFilter) locationFilter.value = '';
+          break;
+        case 'budget':
+        case 'min-budget':
+          const minBudget = document.getElementById('min-budget');
+          if (minBudget) minBudget.value = '';
+          break;
+        case 'max-budget':
+          const maxBudget = document.getElementById('max-budget');
+          if (maxBudget) maxBudget.value = '';
+          break;
+        case 'search':
+          const searchInput = document.getElementById('search-input');
+          if (searchInput) searchInput.value = '';
+          break;
+      }
+      
+      // Reset to first page and reapply filters
+      currentPage = 1;
+      applyFiltersAndSort();
+    }
+    
+    // Reset all filters
+    function resetFilters() {
+      const categoryFilter = document.getElementById('category-filter');
+      const locationFilter = document.getElementById('location-filter');
+      const minBudget = document.getElementById('min-budget');
+      const maxBudget = document.getElementById('max-budget');
+      const searchInput = document.getElementById('search-input');
+      
+      if (categoryFilter) categoryFilter.value = '';
+      if (locationFilter) locationFilter.value = '';
+      if (minBudget) minBudget.value = '';
+      if (maxBudget) maxBudget.value = '';
+      if (searchInput) searchInput.value = '';
+      
+      // Reset to first page and reapply filters
+      currentPage = 1;
+      applyFiltersAndSort();
+    }
+    
+    // Render the current page of tasks
+    function renderTasks() {
+      const tasksContainer = document.getElementById('tasks-container');
+      const emptyContainer = document.getElementById('empty-container');
+      const loadMoreContainer = document.getElementById('load-more-container');
+      
+      if (!tasksContainer || !emptyContainer || !loadMoreContainer) return;
+      
+      // Check if we have tasks after filtering
+      if (displayedTasks.length === 0) {
+        tasksContainer.classList.add('hidden');
+        emptyContainer.classList.remove('hidden');
+        loadMoreContainer.classList.add('hidden');
+        return;
+      }
+      
+      // Show tasks container, hide empty state
+      tasksContainer.classList.remove('hidden');
+      emptyContainer.classList.add('hidden');
+      
+      // Calculate which tasks to show on the current page
+      const startIndex = (currentPage - 1) * tasksPerPage;
+      const endIndex = startIndex + tasksPerPage;
+      const tasksToShow = displayedTasks.slice(startIndex, endIndex);
+      
+      // Clear tasks container if on first page
+      if (currentPage === 1) {
+        tasksContainer.innerHTML = '';
+      }
+      
+      // Add tasks to the container
+      tasksToShow.forEach((task, index) => {
+        const taskCard = createTaskCard(task, index);
+        tasksContainer.appendChild(taskCard);
+      });
+      
+      // Update load more button visibility
+      if (endIndex < displayedTasks.length) {
+        loadMoreContainer.classList.remove('hidden');
+        const loadMoreButton = document.getElementById('load-more-button');
+        if (loadMoreButton) {
+          loadMoreButton.onclick = () => {
+            currentPage++;
+            renderTasks();
+          };
+        }
+      } else {
+        loadMoreContainer.classList.add('hidden');
+      }
+    }
+    
+    // Create a task card element
+    function createTaskCard(task, index) {
+      const card = document.createElement('div');
+      card.className = 'bg-white rounded-lg shadow-sm overflow-hidden task-card animate-fade-in';
+      card.style.animationDelay = `${(index % tasksPerPage) * 0.1}s`;
+      
+      const formattedDate = TaskUtils?.formatDate 
+        ? TaskUtils.formatDate(task.createdAt, true)
+        : formatDate(task.createdAt);
+      
+      // Truncate description to reasonable length
+      const shortDescription = task.description?.length > 100
+        ? task.description.substring(0, 100) + '...'
+        : task.description;
+      
+      card.innerHTML = `
+        <div class="p-5">
+          <div class="flex justify-between items-start mb-3">
+            <h3 class="font-semibold text-lg">
+              <a href="task-detail.html?id=${task.id}" class="hover:text-primary transition-colors">${task.title}</a>
+            </h3>
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-600 status-pill">
+              <i class="fas fa-circle text-xs mr-1"></i>Open
+            </span>
+          </div>
+          
+          <p class="text-gray-600 text-sm mb-4">${shortDescription}</p>
+          
+          <div class="flex items-center text-sm text-gray-500 mb-3">
+            <i class="fas fa-tag mr-2 opacity-70"></i>
+            <span>${task.category || 'Other'}</span>
+          </div>
+          
+          <div class="flex items-center text-sm text-gray-500 mb-3">
+            <i class="fas fa-map-marker-alt mr-2 opacity-70"></i>
+            <span>${task.location || 'Remote'}</span>
+          </div>
+          
+          <div class="flex items-center text-sm text-gray-500">
+            <i class="fas fa-rupee-sign mr-2 opacity-70"></i>
+            <span>${task.budget ? `₹${task.budget}` : 'Negotiable'}</span>
+          </div>
+          
+          <div class="border-t border-gray-100 mt-4 pt-4 flex justify-between items-center">
+            <div class="text-xs text-gray-500">Posted ${formattedDate}</div>
+            <a href="task-detail.html?id=${task.id}" class="text-primary hover:underline text-sm">
+              View Details
+            </a>
+          </div>
+        </div>
+      `;
+      
+      return card;
+    }
+    
+    // Format date helper function
+    function formatDate(dateString, relative = false) {
+      if (!dateString) return 'Recently';
+      
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+      
+      if (relative) {
+        if (diffDays === 0) return 'Today';
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return `${diffDays} days ago`;
+        if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+      }
+      
+      return date.toLocaleDateString();
+    }
+  </script>
+</body>
+</html>
