@@ -4,7 +4,7 @@
 
 (function() {
   // Your Render URL with correct HTTPS protocol
-  const RENDER_URL = 'https://victormain1.onrender.com';
+  const RENDER_URL = 'https://victormain1.onrender.com'; // Remove any extra "-1"
   
   // Initialize API config
   window.API_CONFIG = {

@@ -83,9 +83,9 @@ document.addEventListener('DOMContentLoaded', function() {
    * @returns {Promise} Promise resolving to the API response
    */
   async function registerUser(fullname, email, password) {
-    // Force using the Render URL when on Render domain
-    const API_URL = window.location.hostname === 'victormain1.onrender.com' 
-      ? 'https://victormain1.onrender.com' 
+    // Don't use the current hostname for API URL when on the static site
+    const API_URL = window.location.hostname.includes('victormain1-1.onrender.com')
+      ? 'https://victormain1.onrender.com'  // Always use the API server URL
       : (window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000');
     
     // Show loading state

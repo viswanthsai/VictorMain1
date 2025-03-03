@@ -1,26 +1,24 @@
 const express = require('express');
-const cors = require('cors');
 const bodyParser = require('body-parser');
 const fs = require('fs').promises;
 const path = require('path');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const cors = require('cors');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 
-// Initialize express app
 const app = express();
+const RENDER_URL = 'https://victormain1.onrender.com';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-for-development-only';
 const PORT = process.env.PORT || 9000;
 
-// JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-for-development-only';
-
-// Middleware
 app.use(cors({
   origin: [
     'https://viswanthsai.github.io', 
     'http://127.0.0.1:5502', 
     'http://localhost:5502',
-    'https://victormain1.onrender.com'  // Add this line
+    'https://victormain1.onrender.com',  
+    'https://victormain1-1.onrender.com'  // Add this line for your static site
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
