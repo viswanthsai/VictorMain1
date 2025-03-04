@@ -60,8 +60,9 @@
         </div>
         
         <!-- Mobile menu button -->
-        <button class="md:hidden text-gray-600 focus:outline-none" id="mobile-menu-button">
+        <button class="md:hidden text-gray-600 focus:outline-none" id="mobile-menu-button" aria-label="Toggle navigation menu">
           <i class="fas fa-bars text-xl"></i>
+          <span class="sr-only">Menu</span>
         </button>
         
         <!-- Desktop nav menu -->
@@ -276,7 +277,8 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Attachments (Optional)</label>
             <div class="border-2 border-dashed border-gray-300 rounded-lg px-6 py-8 text-center cursor-pointer hover:bg-gray-50 transition-colors" id="file-drop-area">
-              <input type="file" id="file-input" class="hidden" multiple>
+              <label for="file-input" class="sr-only">Upload files</label>
+              <input type="file" id="file-input" class="hidden" multiple aria-label="Upload files" title="Upload files">
               <div class="mb-3">
                 <i class="fas fa-cloud-upload-alt text-3xl text-gray-400"></i>
               </div>
@@ -342,8 +344,9 @@
       <div class="p-6">
         <div class="flex justify-between items-center mb-6">
           <h3 class="text-xl font-bold text-gray-900">Task Preview</h3>
-          <button id="close-preview" class="text-gray-500 hover:text-gray-700">
+          <button id="close-preview" class="text-gray-500 hover:text-gray-700" title="Close preview">
             <i class="fas fa-times text-xl"></i>
+            <span class="sr-only">Close preview</span>
           </button>
         </div>
         <div id="preview-content" class="space-y-6">

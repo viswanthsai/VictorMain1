@@ -15,12 +15,12 @@ document.addEventListener('DOMContentLoaded', function() {
  * Updates all username display elements across the page
  */
 function updateUserDisplay() {
-  // Get username from localStorage
+  // Get username and email from localStorage
   const username = localStorage.getItem('username') || 'User';
-  const userId = localStorage.getItem('userId');
+  const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
   const isLoggedIn = !!localStorage.getItem('token');
   
-  console.log('Updating user display with:', { username, userId, isLoggedIn });
+  console.log('Updating user display with:', { username, userEmail, isLoggedIn });
   
   // Common elements across pages
   const userAvatar = document.getElementById('user-avatar');
@@ -42,6 +42,11 @@ function updateUserDisplay() {
   // Update dropdown user info
   if (userNameDropdown) {
     userNameDropdown.textContent = username;
+  }
+  
+  // Update email in dropdown
+  if (userEmailDropdown) {
+    userEmailDropdown.textContent = userEmail;
   }
   
   // Update page-specific elements

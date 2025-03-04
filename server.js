@@ -232,7 +232,8 @@ app.post('/api/signup', async (req, res) => {
     res.status(201).json({
       token,
       userId: user._id,
-      username: user.fullname  // This is correct
+      username: user.fullname,  // This is correct
+      email: user.email  // Add this line
     });
   } catch (error) {
     console.error('Error in /api/signup:', error);
@@ -273,6 +274,7 @@ app.post('/api/login', async (req, res) => {
       token,
       userId: user._id,
       username: user.fullname,
+      email: user.email,  // Add this line
       message: 'Login successful'
     });
   } catch (error) {
@@ -419,8 +421,19 @@ app.post('/api/tasks', authenticateToken, async (req, res) => {
 // Get task by ID
 app.get('/api/tasks/:id', async (req, res) => {
   try {
-    const tasks = await readData(TASKS_FILE);
-    const task = tasks.find(t => t.id === parseInt(req.params.id));
+    let task;
+    const taskId = req.params.id;
+    
+    if (mongoConnected && mongoose.connection.readyState === 1) {
+      // Using MongoDB - handle ObjectId
+      console.log('Getting task from MongoDB, id:', taskId);
+      task = await Task.findById(taskId).lean();
+    } else {
+      // Using file-based storage
+      console.log('Getting task from file storage, id:', taskId);
+      const tasks = await readData(TASKS_FILE);
+      task = tasks.find(t => t.id === parseInt(taskId));
+    }
     
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
@@ -428,7 +441,7 @@ app.get('/api/tasks/:id', async (req, res) => {
     
     res.json(task);
   } catch (error) {
-    console.error(`Error in /api/tasks/${req.params.id}:`, error);
+    console.error(`Error in GET /api/tasks/${req.params.id}:`, error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

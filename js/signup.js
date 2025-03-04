@@ -133,6 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
     localStorage.setItem('token', response.token);
     localStorage.setItem('userId', response.userId);
     localStorage.setItem('username', response.username);
+    localStorage.setItem('userEmail', response.email); // Add this line
     
     // Update UI immediately
     if (window.updateUserDisplay) {

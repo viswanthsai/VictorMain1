@@ -766,6 +766,8 @@
       try {
         const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
         
+        console.log('Loading task with ID:', taskId);
+        
         // Fetch task data
         const response = await fetch(`${API_URL}/api/tasks/${taskId}`);
         
@@ -774,6 +776,7 @@
         }
         
         const task = await response.json();
+        console.log('Task loaded:', task);
         
         // Hide loading, show task details
         document.getElementById('loading-container').classList.add('hidden');

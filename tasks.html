@@ -988,7 +988,7 @@
         <div class="p-5">
           <div class="flex justify-between items-start mb-3">
             <h3 class="font-semibold text-lg">
-              <a href="task-detail.html?id=${task.id}" class="hover:text-primary transition-colors">${task.title}</a>
+              <a href="task-detail.html?id=${task._id || task.id}" class="hover:text-primary transition-colors">${task.title}</a>
             </h3>
             <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-600 status-pill">
               <i class="fas fa-circle text-xs mr-1"></i>Open
