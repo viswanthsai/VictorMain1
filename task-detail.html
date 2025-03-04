@@ -52,6 +52,11 @@
     .animate-delay-2 { animation-delay: 0.2s; }
     .animate-delay-3 { animation-delay: 0.3s; }
   </style>
+  <!-- Font Awesome for the chat icon -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <!-- Custom chat icon CSS -->
+  <link rel="stylesheet" href="/css/chat-icon.css">
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
   <!-- Header -->
@@ -98,6 +103,12 @@
               </div>
             </div>
           </div>
+          
+          <!-- Chat icon -->
+          <a href="chat.html" class="p-2 text-gray-600 hover:text-primary rounded-full hover:bg-gray-100 relative">
+            <i class="fas fa-comments"></i>
+            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full" id="chat-count" style="display: none;">0</span>
+          </a>
           
           <!-- User dropdown -->
           <div class="relative" id="user-menu-container">
@@ -154,6 +165,9 @@
         <a href="index.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Home</a>
         <a href="tasks.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Browse Tasks</a>
         <a href="post-task.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Post a Task</a>
+        <a href="chat.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center">
+          <i class="fas fa-comments w-5 mr-2 text-gray-400"></i> Messages
+        </a>
         <div class="border-t border-gray-100 my-1 pt-1" id="mobile-auth-links">
           <a href="login.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Log In</a>
           <a href="signup.html" class="px-2 py-2 text-primary font-medium">Create an Account</a>
@@ -408,6 +422,11 @@
       </div>
     </div>
   </main>
+  
+  <!-- Chat Icon -->
+  <div class="chat-icon">
+      <i class="fas fa-comments"></i>
+  </div>
   
   <!-- Make offer modal -->
   <div id="offer-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
@@ -772,7 +791,8 @@
         const response = await fetch(`${API_URL}/api/tasks/${taskId}`);
         
         if (!response.ok) {
-          throw new Error(`Failed to load task: ${response.status}`);
+          const errorData = await response.json().catch(e => ({ message: `HTTP error: ${response.status}` }));
+          throw new Error(errorData.message || `Failed to load task: ${response.status}`);
         }
         
         const task = await response.json();
@@ -1290,17 +1310,28 @@
         return;
       }
       
+      if (isNaN(parseInt(amount, 10))) {
+        alert('Please enter a valid numeric amount.');
+        return;
+      }
+      
       if (!message) {
         alert('Please enter a message.');
         return;
       }
+      
+      // Get submit button and store its text
+      const submitBtn = document.querySelector('#offer-form button[type="submit"]');
+      const originalBtnText = submitBtn.innerHTML;
       
       try {
         const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
         const token = localStorage.getItem('token');
         
         if (!token) {
-          alert('You must be logged in to make an offer.');
+          const urlParams = new URLSearchParams(window.location.search);
+          const taskId = urlParams.get('id');
+          window.location.href = 'login.html?redirect=task-detail.html?id=' + taskId;
           return;
         }
         
@@ -1312,6 +1343,10 @@
           throw new Error('Task ID not found');
         }
         
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Submitting...';
+        
         // Send offer to server
         const response = await fetch(`${API_URL}/api/tasks/${taskId}/offers`, {
           method: 'POST',
@@ -1320,14 +1355,17 @@
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
-            amount: parseInt(amount),
+            amount: parseInt(amount, 10),
             message: message
           })
         });
         
         if (!response.ok) {
-          throw new Error('Failed to submit offer');
+          const errorData = await response.json().catch(e => ({ message: `HTTP error: ${response.status}` }));
+          throw new Error(errorData.message || 'Failed to submit offer');
         }
+        
+        const data = await response.json();
         
         // Close modal
         document.getElementById('offer-modal').classList.add('hidden');
@@ -1341,7 +1379,13 @@
         
       } catch (error) {
         console.error('Error submitting offer:', error);
-        alert('Failed to submit offer. Please try again.');
+        alert(error.message || 'Failed to submit offer. Please try again.');
+      } finally {
+        // Restore button state
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnText;
+        }
       }
     }
     
@@ -1532,5 +1576,7 @@
       window.location.href = 'login.html';
     }
   </script>
+  <script src="js/notification-handler.js"></script>
+  <script src="/js/chat.js"></script>
 </body>
 </html>

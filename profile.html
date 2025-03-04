@@ -15,6 +15,10 @@
   <script src="js/notification.js"></script>
   <script src="js/task-utils.js"></script>
   <script src="js/user-display.js"></script>
+  <!-- Font Awesome for the chat icon -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <!-- Custom chat icon CSS -->
+  <link rel="stylesheet" href="/css/chat-icon.css">
   <!-- Configure Tailwind -->
   <script>
     tailwind.config = {
@@ -449,6 +453,11 @@
       </div>
     </div>
   </main>
+  
+  <!-- Chat Icon -->
+  <div class="chat-icon">
+    <i class="fas fa-comments"></i>
+  </div>
   
   <!-- Upload avatar modal -->
   <div id="avatar-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
@@ -1918,5 +1927,7 @@
         window.location.href = 'login.html';
       }
     </script>
+    <script src="js/notification-handler.js"></script>
+    <script src="/js/chat.js"></script>
   </body>
 </html>

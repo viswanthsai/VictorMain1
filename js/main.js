@@ -478,7 +478,105 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
+  fetchNotifications();
+  
+  // Refresh notifications every minute
+  setInterval(fetchNotifications, 60000);
 });
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if URLSearchParams is supported and if we're on a page that uses urlParams
+    if (window.URLSearchParams && window.location.search) {
+        const urlParams = new URLSearchParams(window.location.search);
+        // Any code that uses urlParams should be here
+    }
+});
+
+// Add to main.js or create a new js/notifications.js file
+function fetchNotifications() {
+  const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+  const token = localStorage.getItem('token');
+  
+  if (!token) return;
+  
+  fetch(`${API_URL}/api/notifications`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  .then(response => {
+    if (!response.ok) throw new Error('Failed to fetch notifications');
+    return response.json();
+  })
+  .then(notifications => {
+    updateNotificationUI(notifications);
+  })
+  .catch(error => {
+    console.error('Error fetching notifications:', error);
+  });
+}
+
+function updateNotificationUI(notifications) {
+  const container = document.getElementById('notifications-dropdown');
+  if (!container) return;
+  
+  // Update notification count
+  const unreadCount = notifications.filter(n => !n.read).length;
+  const countBadge = document.getElementById('notifications-count');
+  if (countBadge) {
+    countBadge.textContent = unreadCount;
+    countBadge.style.display = unreadCount > 0 ? 'flex' : 'none';
+  }
+  
+  // Find the notifications content area
+  const notificationsContent = container.querySelector('.max-h-64');
+  if (!notificationsContent) return;
+  
+  if (notifications.length === 0) {
+    notificationsContent.innerHTML = '<div class="text-center py-4 text-gray-500">No notifications yet</div>';
+    return;
+  }
+  
+  // Generate notification items
+  let html = '';
+  notifications.forEach(notification => {
+    const date = new Date(notification.createdAt);
+    const timeAgo = getTimeAgo(date);
+    
+    // Determine the link based on notification type
+    let link = '#';
+    if (notification.type === 'offer_accepted' && notification.taskId) {
+      link = `task-detail.html?id=${notification.taskId}`;
+    }
+    
+    html += `
+      <a href="${link}" class="block px-4 py-3 hover:bg-gray-50 border-b border-gray-100 ${notification.read ? '' : 'bg-blue-50'}">
+        <p class="font-medium text-gray-900">${notification.type === 'offer_accepted' ? 'Your offer was accepted!' : 'New notification'}</p>
+        <p class="text-sm text-gray-600">${notification.message}</p>
+        <p class="text-xs text-gray-500 mt-1">${timeAgo}</p>
+      </a>
+    `;
+  });
+  
+  notificationsContent.innerHTML = html;
+}
+
+function getTimeAgo(date) {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffSecs = Math.round(diffMs / 1000);
+  const diffMins = Math.round(diffSecs / 60);
+  const diffHours = Math.round(diffMins / 60);
+  const diffDays = Math.round(diffHours / 24);
+  
+  if (diffSecs < 60) return 'just now';
+  if (diffMins < 60) return `${diffMins} ${diffMins === 1 ? 'minute' : 'minutes'} ago`;
+  if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
+  if (diffDays < 30) return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
+  
+  return date.toLocaleDateString();
+}
 
 // Make Victor globally available
 window.Victor = Victor;

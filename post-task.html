@@ -87,6 +87,14 @@
             </div>
           </div>
           
+          <!-- Chat icon -->
+          <div class="relative">
+            <a href="chat.html" class="p-2 text-gray-600 hover:text-primary rounded-full hover:bg-gray-100 relative" title="Messages">
+              <i class="fas fa-comments"></i>
+              <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full hidden" id="messages-count">0</span>
+            </a>
+          </div>
+          
           <!-- Login/Signup options (visible when logged out) -->
           <div class="flex items-center space-x-2" id="auth-buttons">
             <a class="px-4 py-2 text-gray-700 font-medium hover:text-primary transition-colors" href="login.html" id="login-menu-item">
@@ -142,6 +150,9 @@
         <a href="index.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Home</a>
         <a href="tasks.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Browse Tasks</a>
         <a href="post-task.html" class="px-2 py-2 text-primary bg-primary-light rounded-md">Post a Task</a>
+        <a href="chat.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center">
+          <i class="fas fa-comments w-5 mr-2 text-gray-400"></i> Messages
+        </a>
         <div class="border-t border-gray-100 my-1 pt-1" id="mobile-auth-links">
           <a href="login.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Log In</a>
           <a href="signup.html" class="px-2 py-2 text-primary font-medium">Create an Account</a>
@@ -1109,5 +1120,6 @@
       window.location.href = 'login.html';
     }
   </script>
+  <script src="js/notification-handler.js"></script>
 </body>
 </html>

@@ -44,6 +44,10 @@
       }
     }
   </script>
+  <!-- Font Awesome for the chat icon -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <!-- Custom chat icon CSS -->
+  <link rel="stylesheet" href="/css/chat-icon.css">
 </head>
 <body class="bg-gray-50 min-h-screen font-sans pt-16">
   <!-- Header -->
@@ -90,6 +94,12 @@
               </div>
             </div>
           </div>
+          
+          <!-- Chat icon -->
+          <a href="chat.html" class="p-2 text-gray-600 hover:text-primary rounded-full hover:bg-gray-100 relative">
+            <i class="fas fa-comments"></i>
+            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full" id="chat-count" style="display: none;">0</span>
+          </a>
           
           <!-- User dropdown -->
           <div class="relative" id="user-menu-container">
@@ -223,6 +233,11 @@
     </div>
   </main>
   
+  <!-- Chat Icon -->
+  <div class="chat-icon">
+    <i class="fas fa-comments"></i>
+  </div>
+
   <!-- Footer -->
   <footer class="bg-gray-800 text-white py-8 mt-12">
     <div class="container mx-auto px-4">
@@ -642,5 +657,6 @@
       return card;
     }
   </script>
+  <script src="/js/chat.js"></script>
 </body>
 </html>

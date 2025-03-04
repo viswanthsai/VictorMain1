@@ -63,6 +63,10 @@
     .animate-delay-2 { animation-delay: 0.2s; }
     .animate-delay-3 { animation-delay: 0.3s; }
   </style>
+  <!-- Font Awesome for the chat icon -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <!-- Custom chat icon CSS -->
+  <link rel="stylesheet" href="/css/chat-icon.css">
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
   <!-- Header -->
@@ -108,6 +112,14 @@
                 <div class="text-center py-4 text-gray-500">No notifications yet</div>
               </div>
             </div>
+          </div>
+          
+          <!-- Chat icon -->
+          <div class="relative">
+            <a href="chat.html" class="p-2 text-gray-600 hover:text-primary rounded-full hover:bg-gray-100 relative">
+              <i class="fas fa-comments"></i>
+              <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full" id="chat-count" style="display: none;">0</span>
+            </a>
           </div>
           
           <!-- User dropdown -->
@@ -165,6 +177,9 @@
         <a href="index.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Home</a>
         <a href="tasks.html" class="px-2 py-2 bg-primary-light text-primary rounded-md">Browse Tasks</a>
         <a href="post-task.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Post a Task</a>
+        <a href="chat.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center">
+          <i class="fas fa-comments w-5 mr-2 text-gray-400"></i> Messages
+        </a>
         <div class="border-t border-gray-100 my-1 pt-1" id="mobile-auth-links">
           <a href="login.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Log In</a>
           <a href="signup.html" class="px-2 py-2 text-primary font-medium">Create an Account</a>
@@ -398,6 +413,11 @@
     </div>
   </main>
   
+  <!-- Chat Icon -->
+  <div class="chat-icon">
+    <i class="fas fa-comments"></i>
+  </div>
+
   <footer class="bg-gray-800 text-white py-8">
     <div class="container mx-auto px-4">
       <div class="grid md:grid-cols-4 gap-8">
@@ -1014,7 +1034,7 @@
           
           <div class="border-t border-gray-100 mt-4 pt-4 flex justify-between items-center">
             <div class="text-xs text-gray-500">Posted ${formattedDate}</div>
-            <a href="task-detail.html?id=${task.id}" class="text-primary hover:underline text-sm">
+            <a href="task-detail.html?id=${task._id || task.id}" class="text-primary hover:underline text-sm">
               View Details
             </a>
           </div>
@@ -1042,5 +1062,7 @@
       return date.toLocaleDateString();
     }
   </script>
+  <script src="js/notification-handler.js"></script>
+  <script src="/js/chat.js"></script>
 </body>
 </html>

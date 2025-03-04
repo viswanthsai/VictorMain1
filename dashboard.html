@@ -22,6 +22,7 @@
   <script src="js/task-utils.js"></script>
   <script src="js/main.js"></script>
   <script src="js/user-display.js"></script>
+  <script src="js/notification-handler.js"></script>
   <!-- Configure Tailwind -->
   <script>
     tailwind.config = {
@@ -75,6 +76,10 @@
       animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
   </style>
+  <!-- Font Awesome for the chat icon -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <!-- Custom chat icon CSS -->
+  <link rel="stylesheet" href="/css/chat-icon.css">
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
   <!-- Modern header with shadow -->
@@ -131,6 +136,12 @@
               <a href="#" class="block text-center text-sm text-primary font-medium px-4 py-2 hover:underline">View all notifications</a>
             </div>
           </div>
+          
+          <!-- Chat icon -->
+          <a href="chat.html" class="p-2 text-gray-600 hover:text-primary rounded-full hover:bg-gray-100 relative">
+            <i class="fas fa-comments"></i>
+            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full" id="chat-count" style="display: none;">0</span>
+          </a>
           
           <!-- User dropdown -->
           <div class="relative" id="user-menu-container">
@@ -596,6 +607,56 @@
             </div>
           </div>
         </div>
+        
+        <!-- Received offers section (new) -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-8">
+          <div class="px-6 py-5 border-b border-gray-100">
+            <h2 class="font-semibold text-lg">Received Offers</h2>
+            <p class="text-sm text-gray-500 mt-1">Offers users have made on your tasks</p>
+          </div>
+          
+          <div id="offers-loading" class="text-center py-8">
+            <div class="inline-block w-8 h-8 border-4 border-gray-200 border-t-primary rounded-full animate-spin mb-2"></div>
+            <p class="text-gray-500 text-sm">Loading offers...</p>
+          </div>
+          
+          <div id="no-offers" class="text-center py-10 hidden">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+              <i class="fas fa-inbox text-gray-400 text-xl"></i>
+            </div>
+            <p class="text-gray-500">You don't have any offers on your tasks yet</p>
+          </div>
+          
+          <div class="overflow-x-auto hidden" id="offers-table-container">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200" id="offers-tbody">
+                <!-- Offers will be added here -->
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Error state (hidden by default) -->
+          <div id="offers-error" class="py-8 text-center hidden">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
+              <i class="fas fa-exclamation-triangle text-red-500 text-xl"></i>
+            </div>
+            <p class="text-gray-800 font-medium mb-2">Failed to load offers</p>
+            <p class="text-gray-500 mb-4">Please try again or contact support if the problem persists</p>
+            <button id="retry-offers" class="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
+              <i class="fas fa-redo mr-2"></i> Try Again
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Accepted Tasks Section -->
@@ -734,6 +795,56 @@
         </div>
       </div>
     </main>
+  </div>
+
+  <!-- Chat Icon -->
+  <div class="chat-icon">
+    <i class="fas fa-comments"></i>
+  </div>
+
+  <!-- Offer Details Modal (new) -->
+  <div id="offer-details-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black opacity-50" id="offer-modal-backdrop"></div>
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 z-10 overflow-hidden">
+      <div class="p-6 border-b border-gray-100">
+        <div class="flex justify-between items-center">
+          <h3 class="text-xl font-bold" id="modal-task-title">Offer Details</h3>
+          <button id="close-offer-modal" class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+      <div class="p-6">
+        <div class="mb-4">
+          <span class="text-sm text-gray-500">Task:</span>
+          <p class="font-medium" id="modal-task-name"></p>
+        </div>
+        <div class="mb-4">
+          <span class="text-sm text-gray-500">From:</span>
+          <p class="font-medium" id="modal-user-name"></p>
+        </div>
+        <div class="mb-4">
+          <span class="text-sm text-gray-500">Offer Amount:</span>
+          <p class="font-medium text-lg text-green-600" id="modal-amount"></p>
+        </div>
+        <div class="mb-6">
+          <span class="text-sm text-gray-500">Message:</span>
+          <p class="mt-1 p-3 bg-gray-50 rounded-lg" id="modal-message"></p>
+        </div>
+        <div class="mb-4">
+          <span class="text-sm text-gray-500">Submitted:</span>
+          <p id="modal-date"></p>
+        </div>
+        <div id="modal-actions" class="flex justify-end space-x-3 mt-6">
+          <button id="modal-decline-offer" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+            Decline Offer
+          </button>
+          <button id="modal-accept-offer" class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg">
+            Accept Offer
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Notification System (Hidden by default) -->
@@ -941,6 +1052,9 @@
         updateTasksTable(tasks);
         updateAcceptedTasksView(tasks);
         
+        // Also fetch offers for user's tasks
+        fetchMyOffers();
+        
       } catch (error) {
         console.error('Error fetching tasks:', error);
         
@@ -979,6 +1093,121 @@
           `;
         }
       }
+    }
+    
+    // Fetch offers for the current user's tasks
+    async function fetchMyOffers() {
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          console.log('User not logged in, skipping offers fetch');
+          return;
+        }
+        
+        // Show loading state
+        document.getElementById('offers-loading').classList.remove('hidden');
+        document.getElementById('no-offers').classList.add('hidden');
+        document.getElementById('offers-table-container').classList.add('hidden');
+        document.getElementById('offers-error').classList.add('hidden');
+        
+        // Fetch offers
+        const response = await fetch(`${API_URL}/api/my-offers`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch offers');
+        }
+        
+        const offers = await response.json();
+        
+        // Hide loading state
+        document.getElementById('offers-loading').classList.add('hidden');
+        
+        // Show appropriate UI based on offers data
+        if (offers.length === 0) {
+          document.getElementById('no-offers').classList.remove('hidden');
+        } else {
+          document.getElementById('offers-table-container').classList.remove('hidden');
+          populateOffersTable(offers);
+        }
+        
+      } catch (error) {
+        console.error('Error fetching offers:', error);
+        document.getElementById('offers-loading').classList.add('hidden');
+        document.getElementById('offers-error').classList.remove('hidden');
+        
+        // Add retry button functionality
+        document.getElementById('retry-offers').addEventListener('click', fetchMyOffers);
+      }
+    }
+    
+    // Populate offers table with data
+    function populateOffersTable(offers) {
+      const offersTable = document.getElementById('offers-tbody');
+      if (!offersTable) return;
+      
+      // Clear existing content
+      offersTable.innerHTML = '';
+      
+      // Sort by most recent first
+      const sortedOffers = [...offers].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      // Create table rows for each offer
+      sortedOffers.forEach(offer => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50 transition-colors';
+        
+        // Format date
+        const offerDate = formatDate(offer.createdAt, true);
+        
+        // Determine status class
+        let statusClass = 'bg-yellow-50 text-yellow-600';
+        if (offer.status === 'accepted') {
+          statusClass = 'bg-green-50 text-green-600';
+        } else if (offer.status === 'declined') {
+          statusClass = 'bg-red-50 text-red-600';
+        }
+        
+        // Build the row HTML
+        row.innerHTML = `
+          <td class="px-6 py-4">
+            <span class="font-medium">${offer.taskTitle || 'Unknown Task'}</span>
+          </td>
+          <td class="px-6 py-4">
+            ${offer.username || 'Unknown User'}
+          </td>
+          <td class="px-6 py-4 font-medium">
+            ₹${offer.amount}
+          </td>
+          <td class="px-6 py-4">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}">
+              ${offer.status === 'pending' ? 'Pending' : (offer.status === 'accepted' ? 'Accepted' : 'Declined')}
+            </span>
+          </td>
+          <td class="px-6 py-4 text-sm text-gray-500">
+            ${offerDate}
+          </td>
+          <td class="px-6 py-4 text-right">
+            <button class="text-primary hover:text-primary-dark view-offer-btn" data-offer-id="${offer.id}">
+              <i class="fas fa-eye mr-1"></i> View
+            </button>
+          </td>
+        `;
+        
+        // Add the row to the table
+        offersTable.appendChild(row);
+        
+        // Add event listener to view button
+        const viewBtn = row.querySelector('.view-offer-btn');
+        if (viewBtn) {
+          viewBtn.addEventListener('click', () => viewOfferDetails(offer));
+        }
+      });
     }
     
     // Update dashboard statistics based on task data
@@ -1251,6 +1480,173 @@
       });
     }
     
+    // Show offer details in modal
+    function viewOfferDetails(offer) {
+      // Populate modal with offer details
+      document.getElementById('modal-task-name').textContent = offer.taskTitle || 'Unknown Task';
+      document.getElementById('modal-user-name').textContent = offer.username || 'Unknown User';
+      document.getElementById('modal-amount').textContent = `₹${offer.amount}`;
+      document.getElementById('modal-message').textContent = offer.message || 'No message provided';
+      document.getElementById('modal-date').textContent = formatDate(offer.createdAt);
+      
+      // Show/hide action buttons based on offer status
+      const actionsContainer = document.getElementById('modal-actions');
+      if (offer.status === 'pending') {
+        actionsContainer.classList.remove('hidden');
+        
+        // Set up action buttons
+        const acceptBtn = document.getElementById('modal-accept-offer');
+        const declineBtn = document.getElementById('modal-decline-offer');
+        
+        acceptBtn.onclick = () => acceptOffer(offer.id, offer.taskId);
+        declineBtn.onclick = () => declineOffer(offer.id, offer.taskId);
+      } else {
+        actionsContainer.classList.add('hidden');
+      }
+      
+      // Show the modal
+      document.getElementById('offer-details-modal').classList.remove('hidden');
+      
+      // Set up close button
+      document.getElementById('close-offer-modal').addEventListener('click', closeOfferModal);
+      document.getElementById('offer-modal-backdrop').addEventListener('click', closeOfferModal);
+    }
+    
+    // Close offer details modal
+    function closeOfferModal() {
+      document.getElementById('offer-details-modal').classList.add('hidden');
+    }
+    
+    // Accept an offer
+    async function acceptOffer(offerId, taskId) {
+      if (!confirm('Are you sure you want to accept this offer? The task will be assigned to this user.')) {
+        return;
+      }
+      
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        // Show loading state in button
+        const acceptBtn = document.getElementById('modal-accept-offer');
+        const originalBtnText = acceptBtn.innerHTML;
+        acceptBtn.disabled = true;
+        acceptBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+        
+        // Get offer details first to know who to notify
+        const offerResponse = await fetch(`${API_URL}/api/tasks/${taskId}/offers/${offerId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!offerResponse.ok) {
+          throw new Error('Failed to get offer details');
+        }
+        
+        const offer = await offerResponse.json();
+        
+        // Send accept request
+        const response = await fetch(`${API_URL}/api/tasks/${taskId}/offers/${offerId}/accept`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to accept offer');
+        }
+        
+        // Send notification to the user
+        const notificationResponse = await fetch(`${API_URL}/api/notifications/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            recipientId: offer.userId, // ID of user who made the offer
+            type: 'offer_accepted',
+            message: `Your offer for the task "${offer.taskTitle || 'Unknown task'}" has been accepted!`,
+            taskId: taskId,
+            offerId: offerId
+          })
+        }).catch(err => {
+          console.warn('Failed to send notification, but offer was accepted:', err);
+        });
+        
+        // Close modal
+        closeOfferModal();
+        
+        // Show success notification
+        showNotification('Offer accepted successfully!', 'success');
+        
+        // Refresh offers and tasks
+        fetchMyOffers();
+        fetchTasks();
+        
+      } catch (error) {
+        console.error('Error accepting offer:', error);
+        showNotification('Failed to accept offer. Please try again.', 'error');
+        
+        // Restore button state
+        const acceptBtn = document.getElementById('modal-accept-offer');
+        acceptBtn.disabled = false;
+        acceptBtn.innerHTML = originalBtnText || 'Accept Offer';
+      }
+    }
+    
+    // Decline an offer
+    async function declineOffer(offerId, taskId) {
+      if (!confirm('Are you sure you want to decline this offer?')) {
+        return;
+      }
+      
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        // Show loading state in button
+        const declineBtn = document.getElementById('modal-decline-offer');
+        const originalBtnText = declineBtn.innerHTML;
+        declineBtn.disabled = true;
+        declineBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+        
+        // Send decline request
+        const response = await fetch(`${API_URL}/api/tasks/${taskId}/offers/${offerId}/decline`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to decline offer');
+        }
+        
+        // Close modal
+        closeOfferModal();
+        
+        // Show success notification
+        showNotification('Offer declined successfully', 'info');
+        
+        // Refresh offers
+        fetchMyOffers();
+        
+      } catch (error) {
+        console.error('Error declining offer:', error);
+        showNotification('Failed to decline offer. Please try again.', 'error');
+        
+        // Restore button state
+        const declineBtn = document.getElementById('modal-decline-offer');
+        declineBtn.disabled = false;
+        declineBtn.innerHTML = 'Decline Offer';
+      }
+    }
+    
     // Show a notification using the notification utility or a fallback
     function showNotification(message, type = 'info') {
       // Use the notification utility if available
@@ -1363,6 +1759,14 @@
       
       window.location.href = 'login.html?message=You have been logged out';
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const retryOffersBtn = document.getElementById('retry-offers');
+      if (retryOffersBtn) {
+        retryOffersBtn.addEventListener('click', fetchMyOffers);
+      }
+    });
   </script>
+  <script src="/js/chat.js"></script>
 </body>
 </html>

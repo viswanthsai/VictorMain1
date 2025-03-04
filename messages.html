@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages | Victor</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Config script -->
+    <script src="js/config.js"></script>
+    <script src="js/notification.js"></script>
+    <script src="js/user-display.js"></script>
+    <!-- Chat specific styles -->
+    <link rel="stylesheet" href="css/chat.css">
+    <!-- Configure Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#1a73e8',
+                            dark: '#1557b0',
+                            light: '#e8f0fe',
+                        },
+                        secondary: '#5f6368',
+                        success: '#0d904f',
+                        warning: '#f9ab00',
+                        danger: '#d93025',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 flex flex-col min-h-screen font-sans">
+    <!-- Header -->
+    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between py-3">
+                <a class="text-primary font-bold text-2xl flex items-center" href="index.html">
+                    <span class="bg-gradient-to-r from-primary to-blue-600 text-white p-1.5 rounded mr-1.5 flex items-center justify-center w-8 h-8">V</span>ictor
+                </a>
+                
+                <!-- Search bar - desktop -->
+                <div class="hidden md:flex flex-grow max-w-xl mx-8">
+                    <div class="relative w-full">
+                        <input type="text" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mobile menu button -->
+                <button class="md:hidden text-gray-600 focus:outline-none" id="mobile-menu-button">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                
+                <!-- Desktop nav menu -->
+                <nav class="hidden md:flex items-center space-x-1">
+                    <a href="index.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Home</a>
+                    <a href="tasks.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Browse Tasks</a>
+                    <a href="post-task.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Post a Task</a>
+                    
+                    <!-- Notifications dropdown -->
+                    <div class="relative">
+                        <button class="p-2 text-gray-600 hover:text-primary rounded-full hover:bg-gray-100 relative" id="notification-button">
+                            <i class="fas fa-bell"></i>
+                            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full" id="notifications-count" style="display: none;">0</span>
+                        </button>
+                        <div class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg py-1 z-10 hidden border border-gray-100" id="notifications-dropdown">
+                            <div class="px-4 py-3 border-b border-gray-100">
+                                <h3 class="font-semibold text-gray-900">Notifications</h3>
+                            </div>
+                            <div class="max-h-64 overflow-y-auto">
+                                <!-- Notifications will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Messages dropdown -->
+                    <div class="relative">
+                        <a href="messages.html" class="p-2 text-primary hover:text-primary-dark rounded-full hover:bg-gray-100 relative">
+                            <i class="fas fa-envelope"></i>
+                            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full" id="chat-count" style="display: none;">0</span>
+                        </a>
+                    </div>
+                    
+                    <!-- User dropdown -->
+                    <div class="relative" id="user-menu-item">
+                        <button class="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-full transition-colors" id="user-menu-button">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-400 to-blue-500 text-white flex items-center justify-center font-bold mr-2" id="user-avatar">V</div>
+                            <span class="font-medium mr-1" id="username-display">User</span>
+                            <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                        </button>
+                        <div class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-1 z-10 hidden border border-gray-100" id="user-dropdown">
+                            <div class="px-4 py-3 border-b border-gray-100">
+                                <p class="text-sm font-medium text-gray-900" id="user-name-dropdown">User</p>
+                                <p class="text-sm text-gray-500 truncate" id="user-email-dropdown">user@example.com</p>
+                            </div>
+                            <a href="dashboard.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                                <i class="fas fa-tachometer-alt w-5 text-gray-400 mr-2"></i> Dashboard
+                            </a>
+                            <a href="profile.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                                <i class="fas fa-user-circle w-5 text-gray-400 mr-2"></i> My Profile
+                            </a>
+                            <a href="accepted-tasks.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                                <i class="fas fa-check-circle w-5 text-gray-400 mr-2"></i> Tasks I'm Working On
+                            </a>
+                            <div class="border-t border-gray-100 my-1"></div>
+                            <a href="#" id="logout-button" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                                <i class="fas fa-sign-out-alt w-5 text-gray-400 mr-2"></i> Logout
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Login/Signup options (visible when logged out) -->
+                    <div class="flex items-center space-x-2" id="auth-buttons">
+                        <a class="px-4 py-2 text-gray-700 font-medium hover:text-primary transition-colors" href="login.html" id="login-menu-item">
+                            Log In
+                        </a>
+                        <a class="px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors" href="signup.html" id="signup-menu-item">
+                            Sign Up
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </div>
+        
+        <!-- Mobile menu (hidden by default) -->
+        <div class="md:hidden bg-white border-t border-gray-100 px-4 py-2 hidden" id="mobile-menu">
+            <!-- Mobile search -->
+            <div class="relative mb-4">
+                <input type="text" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400"></i>
+                </div>
+            </div>
+            <!-- Mobile nav menu -->
+            <nav class="space-y-1">
+                <a href="index.html" class="block px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Home</a>
+                <a href="tasks.html" class="block px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Browse Tasks</a>
+                <a href="post-task.html" class="block px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Post a Task</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8 flex-grow mt-16">
+        <div class="max-w-5xl mx-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">My Messages</h1>
+                <button id="refresh-chats" class="text-blue-500 hover:text-blue-700">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+
+            <!-- Messages list -->
+            <div class="bg-white rounded-lg shadow-sm p-0">
+                <div id="messages-list" class="min-h-[300px]">
+                    <div class="py-20 text-center text-gray-500">
+                        <i class="fas fa-spinner fa-spin text-3xl"></i>
+                        <p class="mt-2">Loading conversations...</p>
+                    </div>
+                </div>
+
+                <!-- Empty state -->
+                <div id="empty-state" class="hidden py-16 text-center">
+                    <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-comments text-gray-400 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-700">No messages yet</h3>
+                    <p class="text-gray-500 mt-2 max-w-md mx-auto">
+                        When you communicate with task posters or workers, your conversations will appear here.
+                    </p>
+                    <div class="mt-6">
+                        <a href="browse.html" class="bg-primary hover:bg-primary-dark text-white py-2 px-6 rounded-lg transition-colors">
+                            Browse Tasks
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white mt-auto border-t border-gray-200">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="text-center md:text-left mb-4 md:mb-0">
+                    <a href="index.html" class="text-xl font-bold text-primary">
+                        <i class="fas fa-hands-helping mr-1"></i> Victor
+                    </a>
+                    <p class="text-sm text-gray-500 mt-1">Connect with helpers in your community</p>
+                </div>
+                <div class="flex space-x-6">
+                    <a href="about.html" class="text-sm text-gray-600 hover:text-primary transition-colors">About</a>
+                    <a href="contact.html" class="text-sm text-gray-600 hover:text-primary transition-colors">Contact</a>
+                    <a href="privacy.html" class="text-sm text-gray-600 hover:text-primary transition-colors">Privacy</a>
+                    <a href="terms.html" class="text-sm text-gray-600 hover:text-primary transition-colors">Terms</a>
+                </div>
+            </div>
+            <div class="text-center text-sm text-gray-500 mt-6">
+                &copy; 2023 Victor. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+    <script src="js/chat-system.js"></script>
+    <script>
+        // Document ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is logged in
+            if (!Victor.auth.isLoggedIn()) {
+                window.location.href = 'login.html?redirect=messages.html';
+                return;
+            }
+            
+            // Load messages list
+            loadMessagesList();
+
+            // Setup notification dropdown
+            const notificationButton = document.getElementById('notification-button');
+            const notificationsDropdown = document.getElementById('notifications-dropdown');
+            
+            if (notificationButton && notificationsDropdown) {
+                notificationButton.addEventListener('click', function() {
+                    notificationsDropdown.classList.toggle('hidden');
+                });
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(event) {
+                    if (!notificationButton.contains(event.target) && !notificationsDropdown.contains(event.target)) {
+                        notificationsDropdown.classList.add('hidden');
+                    }
+                });
+            }
+            
+            // Setup refresh button
+            const refreshButton = document.getElementById('refresh-chats');
+            if (refreshButton) {
+                refreshButton.addEventListener('click', function() {
+                    loadMessagesList();
+                });
+            }
+        });
+
+        // Load messages list
+        async function loadMessagesList() {
+            const messagesListElement = document.getElementById('messages-list');
+            const emptyStateElement = document.getElementById('empty-state');
+            const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+            const token = localStorage.getItem('token');
+            
+            if (!token || !messagesListElement) return;
+            
+            // Show loading state
+            messagesListElement.innerHTML = `
+                <div class="py-20 text-center text-gray-500">
+                    <i class="fas fa-spinner fa-spin text-3xl"></i>
+                    <p class="mt-2">Loading conversations...</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/chats`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load conversations');
+                }
+                
+                const chats = await response.json();
+                
+                // Check if empty
+                if (chats.length === 0) {
+                    messagesListElement.classList.add('hidden');
+                    emptyStateElement.classList.remove('hidden');
+                    return;
+                }
+                
+                // Hide empty state, show messages
+                messagesListElement.classList.remove('hidden');
+                emptyStateElement.classList.add('hidden');
+                
+                // Render chats
+                messagesListElement.innerHTML = '';
+                chats.forEach(chat => {
+                    const date = new Date(chat.lastMessage.timestamp);
+                    messagesListElement.innerHTML += `
+                        <a href="chat.html?id=${chat.id}" class="block border-b border-gray-100 last:border-b-0">
+                            <div class="px-6 py-4 hover:bg-gray-50 transition-colors">
+                                <div class="flex items-start">
+                                    <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-400 to-indigo-500 text-white flex items-center justify-center font-bold text-lg mr-4">
+                                        ${chat.otherUser.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div class="flex-grow">
+                                        <div class="flex justify-between">
+                                            <h3 class="font-semibold text-gray-900">${chat.otherUser.name}</h3>
+                                            <span class="text-xs text-gray-500">${formatChatTime(date)}</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600 truncate mt-1">${chat.lastMessage.text}</p>
+                                        <div class="flex justify-between items-center mt-2">
+                                            <span class="text-xs text-gray-500">Task: ${chat.taskTitle}</span>
+                                            ${chat.unreadCount > 0 ? `
+                                                <span class="bg-primary text-white text-xs rounded-full px-2 py-0.5">
+                                                    ${chat.unreadCount} new
+                                                </span>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                });
+                
+            } catch (error) {
+                console.error('Error loading conversations:', error);
+                messagesListElement.innerHTML = `
+                    <div class="py-12 text-center">
+                        <div class="text-red-500 mb-3"><i class="fas fa-exclamation-circle text-xl"></i></div>
+                        <p class="text-gray-700">Failed to load conversations</p>
+                        <button id="retry-button" class="mt-4 text-primary hover:underline">Try again</button>
+                    </div>
+                `;
+                
+                // Add retry functionality
+                const retryButton = document.getElementById('retry-button');
+                if (retryButton) {
+                    retryButton.addEventListener('click', () => loadMessagesList());
+                }
+            }
+        }
+        
+        // Format chat timestamp
+        function formatChatTime(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) {
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } else if (diffDays === 1) {
+                return 'Yesterday';
+            } else if (diffDays < 7) {
+                return date.toLocaleDateString([], { weekday: 'short' });
+            } else {
+                return date.toLocaleDateString();
+            }
+        }
+    </script>
+</body>
+</html>

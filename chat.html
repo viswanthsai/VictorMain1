@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat | Victor</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Config script -->
+    <script src="js/config.js"></script>
+    <script src="js/notification.js"></script>
+    <script src="js/user-display.js"></script>
+    <!-- Chat specific styles -->
+    <link rel="stylesheet" href="css/chat.css">
+    <!-- Configure Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#1a73e8',
+                            dark: '#1557b0',
+                            light: '#e8f0fe',
+                        },
+                        secondary: '#5f6368',
+                        success: '#0d904f',
+                        warning: '#f9ab00',
+                        danger: '#d93025',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for messages */
+        #messages-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        #messages-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 8px;
+        }
+        #messages-container::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 8px;
+        }
+        #messages-container::-webkit-scrollbar-thumb:hover {
+            background: #bbb;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex flex-col min-h-screen font-sans">
+    <!-- Header -->
+    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between py-3">
+                <a class="text-primary font-bold text-2xl flex items-center" href="index.html">
+                    <span class="bg-gradient-to-r from-primary to-blue-600 text-white p-1.5 rounded mr-1.5 flex items-center justify-center w-8 h-8">V</span>ictor
+                </a>
+                
+                <!-- Search bar - desktop -->
+                <div class="hidden md:flex flex-grow max-w-xl mx-8">
+                    <div class="relative w-full">
+                        <input type="text" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mobile menu button -->
+                <button class="md:hidden text-gray-600 focus:outline-none" id="mobile-menu-button">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                
+                <!-- Desktop nav menu -->
+                <nav class="hidden md:flex items-center space-x-1">
+                    <a href="index.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Home</a>
+                    <a href="tasks.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Browse Tasks</a>
+                    <a href="post-task.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Post a Task</a>
+                    
+                    <!-- Notifications dropdown -->
+                    <div class="relative">
+                        <button class="p-2 text-gray-600 hover:text-primary rounded-full hover:bg-gray-100 relative" id="notifications-button">
+                            <i class="fas fa-bell"></i>
+                            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full" id="notifications-count">0</span>
+                        </button>
+                        <div class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg py-1 z-10 hidden border border-gray-100" id="notifications-dropdown">
+                            <div class="px-4 py-3 border-b border-gray-100">
+                                <h3 class="font-semibold text-gray-900">Notifications</h3>
+                            </div>
+                            <div class="max-h-64 overflow-y-auto" id="notifications-container">
+                                <div class="text-center py-4 text-gray-500">No notifications yet</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Messages dropdown -->
+                    <div class="relative">
+                        <a href="messages.html" class="p-2 text-primary hover:text-primary-dark rounded-full hover:bg-gray-100 relative">
+                            <i class="fas fa-envelope"></i>
+                            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full" id="chat-count" style="display: none;">0</span>
+                        </a>
+                    </div>
+                    
+                    <!-- User dropdown -->
+                    <div class="relative" id="user-menu-container">
+                        <button class="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-full transition-colors" id="user-menu-button">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-400 to-blue-500 text-white flex items-center justify-center font-bold mr-2" id="user-avatar">V</div>
+                            <span class="font-medium mr-1" id="username-display">User</span>
+                            <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                        </button>
+                        <div class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-1 z-10 hidden border border-gray-100" id="user-dropdown">
+                            <div class="px-4 py-3 border-b border-gray-100">
+                                <p class="text-sm font-medium text-gray-900" id="user-name-dropdown">User</p>
+                                <p class="text-sm text-gray-500 truncate" id="user-email-dropdown">user@example.com</p>
+                            </div>
+                            <a href="dashboard.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                                <i class="fas fa-tachometer-alt w-5 text-gray-400 mr-2"></i> Dashboard
+                            </a>
+                            <a href="profile.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                                <i class="fas fa-user-circle w-5 text-gray-400 mr-2"></i> My Profile
+                            </a>
+                            <a href="accepted-tasks.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                                <i class="fas fa-check-circle w-5 text-gray-400 mr-2"></i> Tasks I'm Working On
+                            </a>
+                            <div class="border-t border-gray-100 my-1"></div>
+                            <a href="#" id="logout-button" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                                <i class="fas fa-sign-out-alt w-5 text-gray-400 mr-2"></i> Logout
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Login/Signup options (visible when logged out) -->
+                    <div class="flex items-center space-x-2" id="auth-buttons">
+                        <a class="px-4 py-2 text-gray-700 font-medium hover:text-primary transition-colors" href="login.html" id="login-menu-item">
+                            Log In
+                        </a>
+                        <a class="px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors" href="signup.html" id="signup-menu-item">
+                            Sign Up
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </div>
+        
+        <!-- Mobile menu (hidden by default) -->
+        <div class="md:hidden bg-white border-t border-gray-100 px-4 py-2 hidden" id="mobile-menu">
+            <!-- Mobile search -->
+            <div class="relative mb-4">
+                <input type="text" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400"></i>
+                </div>
+            </div>
+            
+            <div class="flex flex-col space-y-1">
+                <a href="index.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Home</a>
+                <a href="tasks.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Browse Tasks</a>
+                <a href="post-task.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Post a Task</a>
+                <a href="messages.html" class="px-2 py-2 text-primary bg-primary-light rounded-md">Messages</a>
+                <div class="border-t border-gray-100 my-1 pt-1" id="mobile-auth-links">
+                    <a href="login.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Log In</a>
+                    <a href="signup.html" class="px-2 py-2 text-primary font-medium">Create an Account</a>
+                </div>
+                <div id="mobile-user-links" class="hidden">
+                    <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="dashboard.html">
+                        <i class="fas fa-tachometer-alt w-5 mr-2 text-gray-400"></i> Dashboard
+                    </a>
+                    <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="profile.html">
+                        <i class="fas fa-user w-5 mr-2 text-gray-400"></i> My Profile
+                    </a>
+                    <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="accepted-tasks.html">
+                        <i class="fas fa-check-circle w-5 mr-2 text-gray-400"></i> Tasks I'm Working On
+                    </a>
+                    <div class="border-t border-gray-100 my-1"></div>
+                    <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="#" id="mobile-logout-button">
+                        <i class="fas fa-sign-out-alt w-5 mr-2 text-gray-400"></i> Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content with padding for fixed header-->
+    <main class="pt-16 flex-grow flex flex-col lg:flex-row">
+        <!-- Chat Sidebar -->
+        <div class="chat-sidebar bg-white w-full lg:w-80 lg:border-r border-gray-200 flex-shrink-0 h-full">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h2 class="font-semibold text-gray-800">Conversations</h2>
+                <a href="messages.html" class="text-primary hover:text-primary-dark">
+                    <i class="fas fa-external-link-alt"></i>
+                </a>
+            </div>
+            
+            <!-- Chat list -->
+            <div id="chat-list" class="overflow-y-auto h-96">
+                <div class="py-12 text-center text-gray-500">
+                    <i class="fas fa-spinner fa-spin text-xl"></i>
+                    <p class="mt-2">Loading...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chat Main Content -->
+        <div class="flex-grow flex flex-col h-full">
+            <!-- Chat Header -->
+            <div class="bg-white px-4 py-3 border-b border-gray-200 shadow-sm flex justify-between items-center">
+                <div class="flex items-center">
+                    <!-- Mobile sidebar toggle -->
+                    <button id="show-chats-btn" class="mr-3 lg:hidden text-gray-600 hover:text-primary">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    
+                    <!-- Recipient info -->
+                    <div id="recipient-avatar" class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-400 to-indigo-500 text-white flex items-center justify-center font-bold text-lg mr-3">
+                        ?
+                    </div>
+                    <div>
+                        <h2 id="recipient-name" class="font-semibold text-gray-800">Loading...</h2>
+                        <p id="task-title" class="text-xs text-gray-500">Task: Loading...</p>
+                    </div>
+                </div>
+                
+                <div class="flex space-x-2">
+                    <a id="view-profile-btn" href="#" class="text-sm text-primary hover:text-primary-dark transition-colors">
+                        View Profile
+                    </a>
+                    <a id="view-task-btn" href="#" class="text-sm text-primary hover:text-primary-dark transition-colors">
+                        View Task
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Messages Container -->
+            <div id="messages-container" class="flex-grow overflow-y-auto p-4 bg-gray-50">
+                <div class="flex justify-center py-12">
+                    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+                </div>
+            </div>
+            
+            <!-- Message Input -->
+            <div class="bg-white border-t border-gray-200 p-4">
+                <form id="message-form" class="flex items-end">
+                    <div class="flex-grow mr-2">
+                        <textarea 
+                            id="message-input" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                            placeholder="Type a message..." 
+                            rows="1"></textarea>
+                    </div>
+                    <button type="submit" class="bg-primary hover:bg-primary-dark text-white p-3 rounded-full transition-colors flex-shrink-0">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-4 gap-8">
+                <div>
+                    <a class="text-white font-bold text-2xl flex items-center mb-4" href="index.html">
+                        <span class="bg-white text-primary p-1 rounded mr-1.5 flex items-center justify-center w-8 h-8">V</span>ictor
+                    </a>
+                    <p class="text-gray-300 mb-4">Connecting people for tasks - anytime, anywhere. Get help or help others.</p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-4 text-lg">For Task Posters</h4>
+                    <ul class="space-y-2">
+                        <li><a href="post-task.html" class="text-gray-300 hover:text-white transition-colors">Post a Task</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">How it Works</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Pricing</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">FAQ</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-4 text-lg">For Task Performers</h4>
+                    <ul class="space-y-2">
+                        <li><a href="tasks.html" class="text-gray-300 hover:text-white transition-colors">Browse Tasks</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Task Categories</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Earn Money</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Success Stories</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-4 text-lg">Support</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Help Center</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Contact Us</a></li>
+                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Privacy Policy</a></li>
+                        <li><a href="server-status.html" class="text-gray-300 hover:text-white transition-colors">Server Status</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center">
+                <p class="text-gray-300">© 2023 Victor - Connect for Tasks. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+    <script src="js/chat-system.js"></script>
+    <script src="js/chat-page.js"></script>
+</body>
+</html>

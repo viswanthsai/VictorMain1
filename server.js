@@ -9,19 +9,23 @@ const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const User = require('./models/User');
 const Task = require('./models/Task');
+const Offer = require('./models/Offer');
+const Chat = require('./models/Chat');
+const Message = require('./models/Message');
 
+// Initialize Express app
 const app = express();
-const RENDER_URL = 'https://victormain1.onrender.com';
+const RENDER_URL = process.env.RENDER_URL || 'https://victormain1.onrender.com';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-for-development-only';
 const PORT = process.env.PORT || 9000;
 
-// MongoDB connection string with updated options
-const MONGODB_URI = "mongodb+srv://viswanthsai:QWEASDZXC1q@cluster0.6ndpu.mongodb.net/victorDB?retryWrites=true&w=majority&appName=Cluster0";
+// MongoDB connection string
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://viswanthsai:QWEASDZXC1q@cluster0.6ndpu.mongodb.net/victorDB?retryWrites=true&w=majority&appName=Cluster0";
 
 // Track MongoDB connection status
 let mongoConnected = false;
 
-// Connect to MongoDB with better options
+// Connect to MongoDB with improved options
 mongoose.connect(MONGODB_URI, {
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000, 
@@ -43,72 +47,86 @@ mongoose.connect(MONGODB_URI, {
 
 // Add connection event handlers
 mongoose.connection.on('error', err => {
+  mongoConnected = false;
   console.log('Mongoose connection error:', err);
 });
 
 mongoose.connection.on('disconnected', () => {
+  mongoConnected = false;
   console.log('Mongoose disconnected');
 });
 
-app.use(cors({
+// Configure CORS
+const corsOptions = {
   origin: [
     'https://viswanthsai.github.io', 
     'http://127.0.0.1:5502', 
     'http://localhost:5502',
-    'http://localhost:9000',  // Add this for local testing
+    'http://localhost:9000',
     'https://victormain1.onrender.com',  
     'https://victormain1-1.onrender.com'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
-}));
+};
+
+app.use(cors(corsOptions));
 
 // Enable pre-flight across all routes
 app.options('*', cors());
 
+// Request parsing middleware
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// Serve static files from the root directory
+// Serve static files from root directory
 app.use(express.static(path.join(__dirname)));
 
-// Data file paths
-const USERS_FILE = path.join(__dirname, 'data', 'users.json');
-const TASKS_FILE = path.join(__dirname, 'data', 'tasks.json');
+// Data file paths for file-based fallback storage
+const DATA_DIR = path.join(__dirname, 'data');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const TASKS_FILE = path.join(DATA_DIR, 'tasks.json');
+const OFFERS_FILE = path.join(DATA_DIR, 'offers.json');
+const NOTIFICATIONS_FILE = path.join(DATA_DIR, 'notifications.json');
 
 // Ensure data directory exists
 async function ensureDataDirExists() {
-  const dataDir = path.join(__dirname, 'data');
   try {
-    await fs.access(dataDir);
-    console.log('Data directory exists:', dataDir);
+    await fs.access(DATA_DIR);
+    console.log('Data directory exists:', DATA_DIR);
   } catch (error) {
     if (error.code === 'ENOENT') {
-      console.log('Creating data directory:', dataDir);
-      await fs.mkdir(dataDir, { recursive: true });
+      console.log('Creating data directory:', DATA_DIR);
+      await fs.mkdir(DATA_DIR, { recursive: true });
       
       // Create empty data files if they don't exist
-      const usersPath = path.join(dataDir, 'users.json');
-      const tasksPath = path.join(dataDir, 'tasks.json');
-      
-      try {
-        await fs.access(usersPath);
-      } catch (e) {
-        await fs.writeFile(usersPath, '[]');
-        console.log('Created empty users.json file');
-      }
-      
-      try {
-        await fs.access(tasksPath);
-      } catch (e) {
-        await fs.writeFile(tasksPath, '[]');
-        console.log('Created empty tasks.json file');
-      }
+      await createEmptyFileIfNotExists(USERS_FILE);
+      await createEmptyFileIfNotExists(TASKS_FILE);
+      await createEmptyFileIfNotExists(OFFERS_FILE);
+      await createEmptyFileIfNotExists(NOTIFICATIONS_FILE);
     } else {
       console.error('Error accessing data directory:', error);
       throw error;
     }
   }
+}
+
+// Helper to create empty JSON file if it doesn't exist
+async function createEmptyFileIfNotExists(filePath) {
+  try {
+    await fs.access(filePath);
+  } catch (e) {
+    await fs.writeFile(filePath, '[]');
+    console.log(`Created empty file: ${path.basename(filePath)}`);
+  }
+}
+
+// Ensure all data files exist on startup
+async function initializeDataFiles() {
+  await createEmptyFileIfNotExists(USERS_FILE);
+  await createEmptyFileIfNotExists(TASKS_FILE);
+  await createEmptyFileIfNotExists(OFFERS_FILE);
+  await createEmptyFileIfNotExists(NOTIFICATIONS_FILE);
 }
 
 // Read data from JSON file
@@ -156,15 +174,74 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// First define ALL API routes
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({
+    message: 'Server error',
+    error: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message
+  });
+});
+
+// Create notifications collection if using MongoDB
+let notificationsCollection;
+if (mongoConnected) {
+  const notificationSchema = new mongoose.Schema({
+    recipientId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    senderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    type: {
+      type: String,
+      required: true
+    },
+    message: {
+      type: String,
+      required: true
+    },
+    taskId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Task'
+    },
+    offerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Offer'
+    },
+    read: {
+      type: Boolean,
+      default: false
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  });
+  
+  const Notification = mongoose.model('Notification', notificationSchema);
+}
+
+// API ROUTES
+// ===========
+
+// Server status
 app.get('/api/status', (req, res) => {
   res.json({
     status: 'ok',
     message: 'Server is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    mongodb: {
+      connected: mongoConnected,
+      state: mongoose.connection.readyState
+    }
   });
 });
 
+// Database connection test
 app.get('/api/db-test', (req, res) => {
   if (mongoose.connection.readyState === 1) {
     res.json({ 
@@ -185,6 +262,10 @@ app.get('/api/db-test', (req, res) => {
   }
 });
 
+// Authentication Routes
+// --------------------
+
+// User Registration
 app.post('/api/signup', async (req, res) => {
   try {
     const { fullname, email, password } = req.body;
@@ -200,47 +281,86 @@ app.post('/api/signup', async (req, res) => {
       return res.status(400).json({ message: 'Invalid email format' });
     }
     
-    // Check if email exists
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
-      return res.status(409).json({ message: 'Email already in use' });
+    if (mongoConnected) {
+      // MongoDB version
+      // Check if email exists
+      const existingUser = await User.findOne({ email: email.toLowerCase() });
+      if (existingUser) {
+        return res.status(409).json({ message: 'Email already in use' });
+      }
+      
+      // Create new user
+      const user = new User({
+        fullname,
+        email: email.toLowerCase(),
+        password // Will be hashed by the pre-save hook
+      });
+      
+      await user.save();
+      
+      // Generate JWT token
+      const token = jwt.sign(
+        { id: user._id, email: user.email, role: user.role },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+      
+      res.status(201).json({
+        token,
+        userId: user._id,
+        username: user.fullname,
+        email: user.email
+      });
+    } else {
+      // File-based version
+      const users = await readData(USERS_FILE);
+      
+      // Check if email exists
+      if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+        return res.status(409).json({ message: 'Email already in use' });
+      }
+      
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+      
+      // Create new user
+      const newUser = {
+        id: uuidv4(),
+        fullname,
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        role: 'user',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Add to users array
+      users.push(newUser);
+      
+      // Save to file
+      await writeData(USERS_FILE, users);
+      
+      // Generate JWT token
+      const token = jwt.sign(
+        { id: newUser.id, email: newUser.email, role: newUser.role },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+      
+      res.status(201).json({
+        token,
+        userId: newUser.id,
+        username: newUser.fullname,
+        email: newUser.email
+      });
     }
-    
-    // Create new user
-    const user = new User({
-      fullname,
-      email,
-      password // Will be hashed by the pre-save hook
-    });
-    
-    await user.save();
-    
-    // Generate JWT token
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-    
-    // Before sending response
-    console.log('Sending response to client:', {
-      token,
-      userId: user._id,
-      username: user.fullname  // Check if this exists
-    });
-    
-    res.status(201).json({
-      token,
-      userId: user._id,
-      username: user.fullname,  // This is correct
-      email: user.email  // Add this line
-    });
   } catch (error) {
     console.error('Error in /api/signup:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
+// User Login
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -250,21 +370,45 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
     
-    // Find user by email
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid email or password' });
-    }
+    let user, passwordMatch, userId;
     
-    // Compare passwords
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
-      return res.status(401).json({ message: 'Invalid email or password' });
+    if (mongoConnected) {
+      // MongoDB version
+      // Find user by email
+      user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+      
+      // Compare passwords
+      passwordMatch = await bcrypt.compare(password, user.password);
+      if (!passwordMatch) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+      
+      userId = user._id;
+    } else {
+      // File-based version
+      const users = await readData(USERS_FILE);
+      
+      // Find user by email
+      user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+      
+      // Compare passwords
+      passwordMatch = await bcrypt.compare(password, user.password);
+      if (!passwordMatch) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+      
+      userId = user.id;
     }
     
     // Generate JWT token
     const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
+      { id: userId, email: user.email, role: user.role || 'user' },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -272,9 +416,9 @@ app.post('/api/login', async (req, res) => {
     // Return user info and token
     res.json({
       token,
-      userId: user._id,
+      userId,
       username: user.fullname,
-      email: user.email,  // Add this line
+      email: user.email,
       message: 'Login successful'
     });
   } catch (error) {
@@ -283,10 +427,14 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// User Routes
+// -----------
+
+// Get Current User
 app.get('/api/users/me', authenticateToken, async (req, res) => {
   try {
-    if (mongoConnected && mongoose.connection.readyState === 1) {
-      // Using MongoDB
+    if (mongoConnected) {
+      // MongoDB version
       const user = await User.findById(req.user.id).lean();
       
       if (!user) {
@@ -297,10 +445,10 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
       const { password, ...userData } = user;
       return res.json({
         ...userData,
-        username: user.fullname // Add this explicitly
+        username: user.fullname
       });
     } else {
-      // File-based storage fallback
+      // File-based version
       const users = await readData(USERS_FILE);
       const user = users.find(u => u.id === req.user.id);
       
@@ -314,23 +462,162 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
     }
   } catch (error) {
     console.error('Error getting current user:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// Get all tasks
+// Get User By ID
+app.get('/api/users/:id', async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    if (mongoConnected) {
+      // MongoDB version
+      const user = await User.findById(userId).lean();
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Return user data without password
+      const { password, ...userData } = user;
+      
+      // Transform the user data to match client expectations
+      return res.json({
+        id: userData._id,
+        username: userData.fullname,
+        email: userData.email,
+        role: userData.role,
+        location: userData.location,
+        createdAt: userData.createdAt,
+        bio: userData.bio || '',
+        skills: userData.skills || []
+      });
+    } else {
+      // File-based version
+      const users = await readData(USERS_FILE);
+      const user = users.find(u => u.id === userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Return user data without password
+      const { password, ...userData } = user;
+      return res.json(userData);
+    }
+  } catch (error) {
+    console.error('Error in GET /api/users/:id:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update User Profile
+app.put('/api/users/:id', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    
+    // Ensure user can only modify their own profile unless they're admin
+    if (userId !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to update this profile' });
+    }
+    
+    if (mongoConnected) {
+      // MongoDB version
+      const user = await User.findById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Update allowed fields
+      const allowedUpdates = ['fullname', 'bio', 'location', 'skills', 'profileImage'];
+      for (const field of allowedUpdates) {
+        if (req.body[field] !== undefined) {
+          user[field] = req.body[field];
+        }
+      }
+      
+      // Save updated user
+      await user.save();
+      
+      // Return without password
+      const userObject = user.toObject();
+      delete userObject.password;
+      
+      res.json(userObject);
+    } else {
+      // File-based version
+      const users = await readData(USERS_FILE);
+      const userIndex = users.findIndex(u => u.id === userId);
+      
+      if (userIndex === -1) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Update user fields but preserve some
+      const updatedUser = {
+        ...users[userIndex],
+        ...req.body,
+        id: userId, // Ensure ID doesn't change
+        password: users[userIndex].password, // Preserve password
+        role: users[userIndex].role, // Preserve role
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Replace in array
+      users[userIndex] = updatedUser;
+      
+      // Write back to file
+      await writeData(USERS_FILE, users);
+      
+      // Return updated user info without password
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    }
+  } catch (error) {
+    console.error(`Error in PUT /api/users/${req.params.id}:`, error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Task Routes
+// -----------
+
+// Get All Tasks
 app.get('/api/tasks', async (req, res) => {
   try {
     let tasks;
+    const { category, status, search } = req.query;
     
-    if (mongoConnected && mongoose.connection.readyState === 1) {
-      // Use MongoDB
-      console.log('Getting tasks from MongoDB');
-      tasks = await Task.find().lean();
+    if (mongoConnected) {
+      // MongoDB version
+      let query = {};
+      
+      // Apply filters if provided
+      if (category) query.category = category;
+      if (status) query.status = status;
+      if (search) query.title = { $regex: search, $options: 'i' };
+      
+      tasks = await Task.find(query).lean();
     } else {
-      // Use file-based storage
-      console.log('Getting tasks from file storage');
+      // File-based version
       tasks = await readData(TASKS_FILE);
+      
+      // Apply filters if provided
+      if (category) {
+        tasks = tasks.filter(task => task.category === category);
+      }
+      if (status) {
+        tasks = tasks.filter(task => task.status === status);
+      }
+      if (search) {
+        const searchLower = search.toLowerCase();
+        tasks = tasks.filter(task => 
+          task.title.toLowerCase().includes(searchLower) || 
+          (task.description && task.description.toLowerCase().includes(searchLower))
+        );
+      }
     }
     
     res.json(tasks);
@@ -340,46 +627,7 @@ app.get('/api/tasks', async (req, res) => {
   }
 });
 
-// Update user profile
-app.put('/api/users/:id', authenticateToken, async (req, res) => {
-  try {
-    const userId = parseInt(req.params.id);
-    const users = await readData(USERS_FILE);
-    const userIndex = users.findIndex(u => u.id === userId);
-    
-    if (userIndex === -1) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    
-    // Check if user is updating their own profile or is an admin
-    if (users[userIndex].id !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Not authorized to update this profile' });
-    }
-    
-    // Update user fields
-    const updatedUser = {
-      ...users[userIndex],
-      ...req.body,
-      id: userId, // Ensure ID doesn't change
-      updatedAt: new Date().toISOString()
-    };
-    
-    // Replace in array
-    users[userIndex] = updatedUser;
-    
-    // Write back to file
-    await writeData(USERS_FILE, users);
-    
-    // Return updated user info without password
-    const { password, ...userWithoutPassword } = updatedUser;
-    res.json(userWithoutPassword);
-  } catch (error) {
-    console.error(`Error in PUT /api/users/${req.params.id}:`, error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// Create new task
+// Create Task
 app.post('/api/tasks', authenticateToken, async (req, res) => {
   try {
     const { title, description, category, location, budget, deadline } = req.body;
@@ -389,50 +637,84 @@ app.post('/api/tasks', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Title and description are required' });
     }
     
-    // Get user info
-    const user = await User.findById(req.user.id);
-    
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    if (mongoConnected) {
+      // MongoDB version
+      // Get user info
+      const user = await User.findById(req.user.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Create new task
+      const task = new Task({
+        title,
+        description,
+        category: category || 'Other',
+        location: location || 'Remote',
+        budget: budget || null,
+        deadline: deadline || null,
+        userId: user._id,
+        createdBy: user.fullname,
+        status: 'Open'
+      });
+      
+      await task.save();
+      
+      // Return the new task
+      res.status(201).json(task);
+    } else {
+      // File-based version
+      const tasks = await readData(TASKS_FILE);
+      
+      // Create new task
+      const newTask = {
+        id: tasks.length > 0 ? Math.max(...tasks.map(t => t.id)) + 1 : 1,
+        title,
+        description,
+        category: category || 'Other',
+        location: location || 'Remote',
+        budget: budget ? parseInt(budget) : null,
+        deadline: deadline || null,
+        userId: req.user.id,
+        status: 'Open',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Add to tasks array
+      tasks.push(newTask);
+      
+      // Save to file
+      await writeData(TASKS_FILE, tasks);
+      
+      res.status(201).json(newTask);
     }
-    
-    // Create new task
-    const task = new Task({
-      title,
-      description,
-      category: category || 'Other',
-      location: location || 'Remote',
-      budget: budget || null,
-      deadline: deadline || null,
-      userId: user._id,
-      createdBy: user.fullname
-    });
-    
-    await task.save();
-    
-    // Return the new task
-    res.status(201).json(task);
   } catch (error) {
     console.error('Error in POST /api/tasks:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// Get task by ID
+// Get Task by ID
 app.get('/api/tasks/:id', async (req, res) => {
   try {
-    let task;
     const taskId = req.params.id;
+    let task;
     
-    if (mongoConnected && mongoose.connection.readyState === 1) {
-      // Using MongoDB - handle ObjectId
-      console.log('Getting task from MongoDB, id:', taskId);
-      task = await Task.findById(taskId).lean();
+    if (mongoConnected) {
+      // MongoDB version
+      // First try with the ID as is
+      task = await Task.findById(taskId).lean().catch(err => null);
+      
+      // If not found and the ID looks like a number, try finding by the 'id' field
+      if (!task && !isNaN(taskId)) {
+        task = await Task.findOne({ id: parseInt(taskId) }).lean().catch(err => null);
+      }
     } else {
-      // Using file-based storage
-      console.log('Getting task from file storage, id:', taskId);
+      // File-based version
       const tasks = await readData(TASKS_FILE);
-      task = tasks.find(t => t.id === parseInt(taskId));
+      task = tasks.find(t => t.id === parseInt(taskId) || t.id === taskId);
     }
     
     if (!task) {
@@ -446,199 +728,1290 @@ app.get('/api/tasks/:id', async (req, res) => {
   }
 });
 
-// Update task
+// Update Task
 app.put('/api/tasks/:id', authenticateToken, async (req, res) => {
   try {
-    const taskId = parseInt(req.params.id);
-    const tasks = await readData(TASKS_FILE);
-    const taskIndex = tasks.findIndex(t => t.id === taskId);
+    const taskId = req.params.id;
     
-    if (taskIndex === -1) {
-      return res.status(404).json({ message: 'Task not found' });
+    if (mongoConnected) {
+      // MongoDB version
+      const task = await Task.findById(taskId);
+      
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      // Check ownership
+      if (task.userId.toString() !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized to update this task' });
+      }
+      
+      // Update allowed fields
+      const allowedUpdates = ['title', 'description', 'category', 'location', 'budget', 'deadline', 'status'];
+      for (const field of allowedUpdates) {
+        if (req.body[field] !== undefined) {
+          task[field] = req.body[field];
+        }
+      }
+      
+      // Save changes
+      await task.save();
+      
+      res.json(task);
+    } else {
+      // File-based version
+      const tasks = await readData(TASKS_FILE);
+      const taskIndex = tasks.findIndex(t => t.id === parseInt(taskId) || t.id === taskId);
+      
+      if (taskIndex === -1) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      // Check ownership
+      if (tasks[taskIndex].userId !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized to update this task' });
+      }
+      
+      // Update task fields
+      const updatedTask = {
+        ...tasks[taskIndex],
+        ...req.body,
+        id: tasks[taskIndex].id, // Preserve ID
+        userId: tasks[taskIndex].userId, // Preserve owner
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Replace in array
+      tasks[taskIndex] = updatedTask;
+      
+      // Write back to file
+      await writeData(TASKS_FILE, tasks);
+      
+      res.json(updatedTask);
     }
-    
-    // Check if user owns the task
-    if (tasks[taskIndex].userId !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Not authorized to update this task' });
-    }
-    
-    // Update task fields
-    const updatedTask = {
-      ...tasks[taskIndex],
-      ...req.body,
-      id: taskId, // Ensure ID doesn't change
-      userId: tasks[taskIndex].userId, // Ensure owner doesn't change
-      updatedAt: new Date().toISOString()
-    };
-    
-    // Replace in array
-    tasks[taskIndex] = updatedTask;
-    
-    // Write back to file
-    await writeData(TASKS_FILE, tasks);
-    
-    // Return updated task
-    res.json(updatedTask);
   } catch (error) {
     console.error(`Error in PUT /api/tasks/${req.params.id}:`, error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// Delete task
+// Update Task Status
+app.put('/api/tasks/:id/status', authenticateToken, async (req, res) => {
+  try {
+    const taskId = req.params.id;
+    const { status } = req.body;
+    
+    if (!status) {
+      return res.status(400).json({ message: 'Status is required' });
+    }
+    
+    if (!['Open', 'In Progress', 'Completed'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status value' });
+    }
+    
+    if (mongoConnected) {
+      // MongoDB version
+      const task = await Task.findById(taskId);
+      
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      // Check ownership for certain transitions
+      if (task.userId.toString() !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized to update this task status' });
+      }
+      
+      // Update status and related fields
+      task.status = status;
+      
+      if (status === 'Completed') {
+        task.completedAt = new Date();
+      }
+      
+      // Save changes
+      await task.save();
+      
+      res.json(task);
+    } else {
+      // File-based version
+      const tasks = await readData(TASKS_FILE);
+      const taskIndex = tasks.findIndex(t => t.id === parseInt(taskId) || t.id === taskId);
+      
+      if (taskIndex === -1) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      // Check ownership for certain transitions
+      if (tasks[taskIndex].userId !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized to update this task status' });
+      }
+      
+      // Update task status and related fields
+      const updatedTask = {
+        ...tasks[taskIndex],
+        status,
+        updatedAt: new Date().toISOString()
+      };
+      
+      if (status === 'Completed') {
+        updatedTask.completedAt = new Date().toISOString();
+      }
+      
+      // Replace in array
+      tasks[taskIndex] = updatedTask;
+      
+      // Write back to file
+      await writeData(TASKS_FILE, tasks);
+      
+      res.json(updatedTask);
+    }
+  } catch (error) {
+    console.error(`Error in PUT /api/tasks/${req.params.id}/status:`, error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Delete Task
 app.delete('/api/tasks/:id', authenticateToken, async (req, res) => {
   try {
-    const taskId = parseInt(req.params.id);
-    const tasks = await readData(TASKS_FILE);
-    const taskIndex = tasks.findIndex(t => t.id === taskId);
+    const taskId = req.params.id;
     
-    if (taskIndex === -1) {
-      return res.status(404).json({ message: 'Task not found' });
+    if (mongoConnected) {
+      // MongoDB version
+      const task = await Task.findById(taskId);
+      
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      // Check ownership
+      if (task.userId.toString() !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized to delete this task' });
+      }
+      
+      // Delete task
+      await Task.findByIdAndDelete(taskId);
+      
+      // Delete associated offers
+      await Offer.deleteMany({ taskId });
+      
+      res.status(204).send();
+    } else {
+      // File-based version
+      const tasks = await readData(TASKS_FILE);
+      const taskIndex = tasks.findIndex(t => t.id === parseInt(taskId) || t.id === taskId);
+      
+      if (taskIndex === -1) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      // Check ownership
+      if (tasks[taskIndex].userId !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized to delete this task' });
+      }
+      
+      // Remove task
+      tasks.splice(taskIndex, 1);
+      
+      // Write back to file
+      await writeData(TASKS_FILE, tasks);
+      
+      // Also remove associated offers
+      const offers = await readData(OFFERS_FILE);
+      const updatedOffers = offers.filter(o => o.taskId !== parseInt(taskId) && o.taskId !== taskId);
+      await writeData(OFFERS_FILE, updatedOffers);
+      
+      res.status(204).send();
     }
-    
-    // Check if user owns the task
-    if (tasks[taskIndex].userId !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Not authorized to delete this task' });
-    }
-    
-    // Remove task
-    tasks.splice(taskIndex, 1);
-    
-    // Write back to file
-    await writeData(TASKS_FILE, tasks);
-    
-    // Return success
-    res.status(204).send();
   } catch (error) {
     console.error(`Error in DELETE /api/tasks/${req.params.id}:`, error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// Accept task
+// Accept Task
 app.post('/api/tasks/:id/accept', authenticateToken, async (req, res) => {
   try {
-    const taskId = parseInt(req.params.id);
-    const tasks = await readData(TASKS_FILE);
-    const taskIndex = tasks.findIndex(t => t.id === taskId);
+    const taskId = req.params.id;
     
-    if (taskIndex === -1) {
-      return res.status(404).json({ message: 'Task not found' });
+    if (mongoConnected) {
+      // MongoDB version
+      const task = await Task.findById(taskId);
+      
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      // Validate task state
+      if (task.status !== 'Open') {
+        return res.status(400).json({ message: 'Task is not available for acceptance' });
+      }
+      
+      // Prevent user from accepting own task
+      if (task.userId.toString() === req.user.id) {
+        return res.status(400).json({ message: 'You cannot accept your own task' });
+      }
+      
+      // Update task
+      task.status = 'In Progress';
+      task.acceptedById = req.user.id;
+      task.acceptedAt = new Date();
+      
+      await task.save();
+      
+      res.json(task);
+    } else {
+      // File-based version
+      const tasks = await readData(TASKS_FILE);
+      const taskIndex = tasks.findIndex(t => t.id === parseInt(taskId) || t.id === taskId);
+      
+      if (taskIndex === -1) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      const task = tasks[taskIndex];
+      
+      // Validate task state
+      if (task.status !== 'Open') {
+        return res.status(400).json({ message: 'Task is not available for acceptance' });
+      }
+      
+      // Prevent user from accepting own task
+      if (task.userId === req.user.id) {
+        return res.status(400).json({ message: 'You cannot accept your own task' });
+      }
+      
+      // Update task
+      const updatedTask = {
+        ...task,
+        status: 'In Progress',
+        acceptedById: req.user.id,
+        acceptedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Update in array
+      tasks[taskIndex] = updatedTask;
+      
+      // Write back to file
+      await writeData(TASKS_FILE, tasks);
+      
+      res.json(updatedTask);
     }
-    
-    const task = tasks[taskIndex];
-    
-    // Validate task state
-    if (task.status !== 'Open') {
-      return res.status(400).json({ message: 'Task is not available for acceptance' });
-    }
-    
-    // Prevent user from accepting own task
-    if (task.userId === req.user.id) {
-      return res.status(400).json({ message: 'You cannot accept your own task' });
-    }
-    
-    // Update task
-    const updatedTask = {
-      ...task,
-      status: 'In Progress',
-      acceptedById: req.user.id,
-      acceptedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    // Update in array
-    tasks[taskIndex] = updatedTask;
-    
-    // Write back to file
-    await writeData(TASKS_FILE, tasks);
-    
-    // Return updated task
-    res.json(updatedTask);
   } catch (error) {
     console.error(`Error in /api/tasks/${req.params.id}/accept:`, error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// Complete task
+// Complete Task
 app.post('/api/tasks/:id/complete', authenticateToken, async (req, res) => {
   try {
-    const taskId = parseInt(req.params.id);
-    const tasks = await readData(TASKS_FILE);
-    const taskIndex = tasks.findIndex(t => t.id === taskId);
+    const taskId = req.params.id;
     
-    if (taskIndex === -1) {
-      return res.status(404).json({ message: 'Task not found' });
+    if (mongoConnected) {
+      // MongoDB version
+      const task = await Task.findById(taskId);
+      
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      // Only task owner can mark as complete
+      if (task.userId.toString() !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Only the task owner can mark it as complete' });
+      }
+      
+      // Validate task state
+      if (task.status !== 'In Progress') {
+        return res.status(400).json({ message: 'Only tasks that are in progress can be completed' });
+      }
+      
+      // Update task
+      task.status = 'Completed';
+      task.completedAt = new Date();
+      
+      await task.save();
+      
+      res.json(task);
+    } else {
+      // File-based version
+      const tasks = await readData(TASKS_FILE);
+      const taskIndex = tasks.findIndex(t => t.id === parseInt(taskId) || t.id === taskId);
+      
+      if (taskIndex === -1) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      const task = tasks[taskIndex];
+      
+      // Only task owner can mark as complete
+      if (task.userId !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Only the task owner can mark it as complete' });
+      }
+      
+      // Validate task state
+      if (task.status !== 'In Progress') {
+        return res.status(400).json({ message: 'Only tasks that are in progress can be completed' });
+      }
+      
+      // Update task
+      const updatedTask = {
+        ...task,
+        status: 'Completed',
+        completedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Update in array
+      tasks[taskIndex] = updatedTask;
+      
+      // Write back to file
+      await writeData(TASKS_FILE, tasks);
+      
+      res.json(updatedTask);
     }
-    
-    const task = tasks[taskIndex];
-    
-    // Only task owner can mark as complete
-    if (task.userId !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Only the task owner can mark it as complete' });
-    }
-    
-    // Validate task state
-    if (task.status !== 'In Progress') {
-      return res.status(400).json({ message: 'Only tasks that are in progress can be completed' });
-    }
-    
-    // Update task
-    const updatedTask = {
-      ...task,
-      status: 'Completed',
-      completedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    // Update in array
-    tasks[taskIndex] = updatedTask;
-    
-    // Write back to file
-    await writeData(TASKS_FILE, tasks);
-    
-    // Return updated task
-    res.json(updatedTask);
   } catch (error) {
     console.error(`Error in /api/tasks/${req.params.id}/complete:`, error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// Get user's tasks (created by them)
+// Offer Routes
+// ------------
+
+// Submit an Offer for a Task
+app.post('/api/tasks/:id/offers', authenticateToken, async (req, res) => {
+  try {
+    const taskId = req.params.id;
+    const { amount, message } = req.body;
+    const userId = req.user.id;
+    
+    console.log('Received offer:', { taskId, userId, amount, message });
+    
+    // Validation
+    if (!amount || !message) {
+      return res.status(400).json({ message: 'Amount and message are required' });
+    }
+    
+    if (mongoConnected) {
+      // MongoDB version
+      // Find the task
+      const task = await Task.findById(taskId);
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      // Check if user is trying to offer on their own task
+      if (task.userId.toString() === userId) {
+        return res.status(400).json({ message: 'You cannot make an offer on your own task' });
+      }
+      
+      // Check if user has already made an offer on this task
+      const existingOffer = await Offer.findOne({ taskId, userId });
+      if (existingOffer) {
+        return res.status(400).json({ message: 'You have already made an offer for this task' });
+      }
+      
+      // Create new offer
+      const offer = new Offer({
+        taskId,
+        userId,
+        amount,
+        message,
+        status: 'pending',
+        createdAt: new Date()
+      });
+      
+      // Save the offer
+      await offer.save();
+      
+      // Return the offer
+      res.status(201).json(offer);
+    } else {
+      // File-based version
+      const tasks = await readData(TASKS_FILE);
+      const task = tasks.find(t => t.id === parseInt(taskId));
+      
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      // Check if user is trying to offer on their own task
+      if (task.userId === userId) {
+        return res.status(400).json({ message: 'You cannot make an offer on your own task' });
+      }
+      
+      // Get offers
+      const offers = await readData(OFFERS_FILE);
+      
+      // Check if user has already made an offer on this task
+      const existingOffer = offers.find(o => o.taskId === parseInt(taskId) && o.userId === userId);
+      if (existingOffer) {
+        return res.status(400).json({ message: 'You have already made an offer for this task' });
+      }
+      
+      // Create new offer
+      const newOffer = {
+        id: offers.length > 0 ? Math.max(...offers.map(o => o.id)) + 1 : 1,
+        taskId: parseInt(taskId),
+        userId,
+        amount: parseInt(amount),
+        message,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      };
+      
+      // Add to offers
+      offers.push(newOffer);
+      
+      // Save to file
+      await writeData(OFFERS_FILE, offers);
+      
+      res.status(201).json(newOffer);
+    }
+  } catch (error) {
+    console.error('Error in POST /api/tasks/:id/offers:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Accept an offer
+app.post('/api/tasks/:taskId/offers/:offerId/accept', authenticateToken, async (req, res) => {
+  try {
+    const { taskId, offerId } = req.params;
+    const userId = req.user.id;
+    
+    if (mongoConnected && mongoose.connection.readyState === 1) {
+      // MongoDB version
+      // Check if task belongs to user
+      const task = await Task.findById(taskId);
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      if (task.userId.toString() !== userId) {
+        return res.status(403).json({ message: 'You can only accept offers on your own tasks' });
+      }
+      
+      // Find the offer
+      const offer = await Offer.findById(offerId);
+      if (!offer) {
+        return res.status(404).json({ message: 'Offer not found' });
+      }
+      
+      if (offer.taskId.toString() !== taskId) {
+        return res.status(400).json({ message: 'Offer does not match task' });
+      }
+      
+      // Check if task is already in progress or completed
+      if (task.status !== 'Open') {
+        return res.status(400).json({ message: 'This task already has an accepted offer' });
+      }
+      
+      // Update task status
+      task.status = 'In Progress';
+      task.acceptedById = offer.userId;
+      task.acceptedOfferId = offerId;
+      task.acceptedAt = new Date();
+      await task.save();
+      
+      // Update offer status
+      offer.status = 'accepted';
+      await offer.save();
+      
+      // Decline all other offers for this task
+      await Offer.updateMany(
+        { taskId, _id: { $ne: offerId } },
+        { $set: { status: 'declined' } }
+      );
+      
+      res.json({ message: 'Offer accepted successfully' });
+    } else {
+      // File-based version
+      const tasks = await readData(TASKS_FILE);
+      const offers = await readData(OFFERS_FILE);
+      
+      // Find task and check ownership
+      const taskIndex = tasks.findIndex(t => t.id == taskId);
+      if (taskIndex === -1) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      const task = tasks[taskIndex];
+      if (task.userId !== userId) {
+        return res.status(403).json({ message: 'You can only accept offers on your own tasks' });
+      }
+      
+      // Check if task is already in progress or completed
+      if (task.status !== 'Open') {
+        return res.status(400).json({ message: 'This task already has an accepted offer' });
+      }
+      
+      // Find offer
+      const offerIndex = offers.findIndex(o => o.id == offerId);
+      if (offerIndex === -1) {
+        return res.status(404).json({ message: 'Offer not found' });
+      }
+      
+      const offer = offers[offerIndex];
+      if (offer.taskId != taskId) {
+        return res.status(400).json({ message: 'Offer does not match task' });
+      }
+      
+      // Update task status
+      tasks[taskIndex] = {
+        ...task,
+        status: 'In Progress',
+        acceptedById: offer.userId,
+        acceptedOfferId: offer.id,
+        acceptedAt: new Date().toISOString()
+      };
+      
+      // Update offer status
+      offers[offerIndex] = {
+        ...offer,
+        status: 'accepted'
+      };
+      
+      // Update all other offers for this task
+      for (let i = 0; i < offers.length; i++) {
+        if (offers[i].taskId == taskId && offers[i].id != offerId) {
+          offers[i] = {
+            ...offers[i],
+            status: 'declined'
+          };
+        }
+      }
+      
+      // Save changes
+      await writeData(TASKS_FILE, tasks);
+      await writeData(OFFERS_FILE, offers);
+      
+      res.json({ message: 'Offer accepted successfully' });
+    }
+  } catch (error) {
+    console.error('Error accepting offer:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Decline an offer
+app.post('/api/tasks/:taskId/offers/:offerId/decline', authenticateToken, async (req, res) => {
+  try {
+    const { taskId, offerId } = req.params;
+    const userId = req.user.id;
+    
+    if (mongoConnected && mongoose.connection.readyState === 1) {
+      // MongoDB version
+      // Check if task belongs to user
+      const task = await Task.findById(taskId);
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      if (task.userId.toString() !== userId) {
+        return res.status(403).json({ message: 'You can only decline offers on your own tasks' });
+      }
+      
+      // Find the offer
+      const offer = await Offer.findById(offerId);
+      if (!offer) {
+        return res.status(404).json({ message: 'Offer not found' });
+      }
+      
+      if (offer.taskId.toString() !== taskId) {
+        return res.status(400).json({ message: 'Offer does not match task' });
+      }
+      
+      // Update offer status
+      offer.status = 'declined';
+      await offer.save();
+      
+      res.json({ message: 'Offer declined successfully' });
+    } else {
+      // File-based version
+      const tasks = await readData(TASKS_FILE);
+      const offers = await readData(OFFERS_FILE);
+      
+      // Find task and check ownership
+      const task = tasks.find(t => t.id == taskId);
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      if (task.userId !== userId) {
+        return res.status(403).json({ message: 'You can only decline offers on your own tasks' });
+      }
+      
+      // Find offer
+      const offerIndex = offers.findIndex(o => o.id == offerId);
+      if (offerIndex === -1) {
+        return res.status(404).json({ message: 'Offer not found' });
+      }
+      
+      const offer = offers[offerIndex];
+      if (offer.taskId != taskId) {
+        return res.status(400).json({ message: 'Offer does not match task' });
+      }
+      
+      // Update offer status
+      offers[offerIndex] = {
+        ...offer,
+        status: 'declined'
+      };
+      
+      // Save changes
+      await writeData(OFFERS_FILE, offers);
+      
+      res.json({ message: 'Offer declined successfully' });
+    }
+  } catch (error) {
+    console.error('Error declining offer:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get a specific offer
+app.get('/api/tasks/:taskId/offers/:offerId', authenticateToken, async (req, res) => {
+  try {
+    const { taskId, offerId } = req.params;
+    
+    if (mongoConnected && mongoose.connection.readyState === 1) {
+      // MongoDB version
+      const task = await Task.findById(taskId);
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      const offer = await Offer.findById(offerId).lean();
+      if (!offer) {
+        return res.status(404).json({ message: 'Offer not found' });
+      }
+      
+      if (offer.taskId.toString() !== taskId) {
+        return res.status(400).json({ message: 'Offer does not belong to this task' });
+      }
+      
+      const user = await User.findById(offer.userId).lean();
+      
+      res.json({
+        ...offer,
+        taskTitle: task.title,
+        userUsername: user ? user.fullname : 'Unknown User'
+      });
+    } else {
+      // File-based version
+      const tasks = await readData(TASKS_FILE);
+      const task = tasks.find(t => t.id == taskId);
+      
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      const offers = await readData(OFFERS_FILE);
+      const offer = offers.find(o => o.id == offerId);
+      
+      if (!offer) {
+        return res.status(404).json({ message: 'Offer not found' });
+      }
+      
+      if (offer.taskId != taskId) {
+        return res.status(400).json({ message: 'Offer does not belong to this task' });
+      }
+      
+      // Get user info
+      const users = await readData(USERS_FILE);
+      const user = users.find(u => u.id === offer.userId);
+      
+      res.json({
+        ...offer,
+        taskTitle: task.title,
+        userUsername: user ? user.fullname : 'Unknown User'
+      });
+    }
+  } catch (error) {
+    console.error('Error getting offer:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get User's Tasks (Created by Them)
 app.get('/api/my-tasks', authenticateToken, async (req, res) => {
   try {
-    const tasks = await readData(TASKS_FILE);
-    const userTasks = tasks.filter(task => task.userId === req.user.id);
-    res.json(userTasks);
+    let tasks;
+    
+    if (mongoConnected) {
+      // MongoDB version
+      tasks = await Task.find({ userId: req.user.id }).lean();
+    } else {
+      // File-based version
+      tasks = await readData(TASKS_FILE);
+      tasks = tasks.filter(task => task.userId === req.user.id);
+    }
+    
+    res.json(tasks);
   } catch (error) {
     console.error('Error in /api/my-tasks:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// Get tasks accepted by the user
+// Get Tasks Accepted by the User
 app.get('/api/my-accepted-tasks', authenticateToken, async (req, res) => {
   try {
-    const tasks = await readData(TASKS_FILE);
-    const acceptedTasks = tasks.filter(task => 
-      task.acceptedById === req.user.id && 
-      (task.status === 'In Progress' || task.status === 'Completed')
-    );
-    res.json(acceptedTasks);
+    let tasks;
+    
+    if (mongoConnected) {
+      // MongoDB version
+      tasks = await Task.find({ acceptedById: req.user.id, status: { $in: ['In Progress', 'Completed'] } }).lean();
+    } else {
+      // File-based version
+      tasks = await readData(TASKS_FILE);
+      tasks = tasks.filter(task => 
+        task.acceptedById === req.user.id && 
+        (task.status === 'In Progress' || task.status === 'Completed')
+      );
+    }
+    
+    res.json(tasks);
   } catch (error) {
     console.error('Error in /api/my-accepted-tasks:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// Then AFTER all API routes, define static file handlers
+// Get offers received for the user's tasks
+app.get('/api/my-offers', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    let offers = [];
+    
+    if (mongoConnected && mongoose.connection.readyState === 1) {
+      // MongoDB version
+      // First get all tasks created by the user
+      const userTasks = await Task.find({ userId: userId }).lean();
+      const taskIds = userTasks.map(task => task._id);
+      
+      // Find offers for those tasks
+      const rawOffers = await Offer.find({ taskId: { $in: taskIds } }).lean();
+      
+      // Get user info for each offer
+      for (const offer of rawOffers) {
+        try {
+          const task = userTasks.find(t => t._id.toString() === offer.taskId.toString());
+          const offerUser = await User.findById(offer.userId).lean();
+          
+          offers.push({
+            id: offer._id,
+            taskId: offer.taskId,
+            userId: offer.userId,
+            taskTitle: task ? task.title : 'Unknown Task',
+            username: offerUser ? offerUser.fullname : 'Unknown User',
+            amount: offer.amount,
+            message: offer.message,
+            status: offer.status,
+            createdAt: offer.createdAt
+          });
+        } catch (e) {
+          console.error('Error processing an offer:', e);
+        }
+      }
+    } else {
+      // File-based version
+      const tasks = await readData(TASKS_FILE);
+      const userTasks = tasks.filter(task => task.userId === userId);
+      const taskIds = userTasks.map(task => task.id);
+      
+      // Get all offers
+      const allOffers = await readData(OFFERS_FILE);
+      
+      // Filter offers for the user's tasks
+      const filteredOffers = allOffers.filter(offer => {
+        return taskIds.includes(parseInt(offer.taskId)) || taskIds.includes(offer.taskId);
+      });
+      
+      // Get user data for each offer
+      const users = await readData(USERS_FILE);
+      
+      offers = filteredOffers.map(offer => {
+        const task = tasks.find(t => t.id == offer.taskId);
+        const offerUser = users.find(u => u.id === offer.userId);
+        
+        return {
+          id: offer.id,
+          taskId: offer.taskId,
+          userId: offer.userId,
+          taskTitle: task ? task.title : 'Unknown Task',
+          username: offerUser ? offerUser.fullname : 'Unknown User',
+          amount: offer.amount,
+          message: offer.message,
+          status: offer.status || 'pending',
+          createdAt: offer.createdAt
+        };
+      });
+    }
+    
+    res.json(offers);
+  } catch (error) {
+    console.error('Error in /api/my-offers:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Send a notification
+app.post('/api/notifications/send', authenticateToken, async (req, res) => {
+  try {
+    const { recipientId, type, message, taskId, offerId } = req.body;
+    const senderId = req.user.id;
+    
+    if (!recipientId || !type || !message) {
+      return res.status(400).json({ message: 'Missing required notification fields' });
+    }
+    
+    if (mongoConnected && mongoose.connection.readyState === 1) {
+      // MongoDB version
+      const notificationSchema = new mongoose.Schema({
+        recipientId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          required: true
+        },
+        senderId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User'
+        },
+        type: {
+          type: String,
+          required: true
+        },
+        message: {
+          type: String,
+          required: true
+        },
+        taskId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Task'
+        },
+        offerId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Offer'
+        },
+        read: {
+          type: Boolean,
+          default: false
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now
+        }
+      });
+      
+      // Only create model if it doesn't exist
+      let Notification;
+      try {
+        Notification = mongoose.model('Notification');
+      } catch (e) {
+        Notification = mongoose.model('Notification', notificationSchema);
+      }
+      
+      const notification = new Notification({
+        recipientId,
+        senderId,
+        type,
+        message,
+        taskId,
+        offerId,
+        read: false,
+        createdAt: new Date()
+      });
+      
+      await notification.save();
+    } else {
+      // File-based version
+      const notifications = await readData(NOTIFICATIONS_FILE).catch(() => []);
+      
+      const newNotification = {
+        id: notifications.length > 0 ? Math.max(...notifications.map(n => n.id)) + 1 : 1,
+        recipientId,
+        senderId,
+        type,
+        message,
+        taskId,
+        offerId,
+        read: false,
+        createdAt: new Date().toISOString()
+      };
+      
+      notifications.push(newNotification);
+      await writeData(NOTIFICATIONS_FILE, notifications);
+    }
+    
+    res.status(201).json({ message: 'Notification sent successfully' });
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get user's notifications
+app.get('/api/notifications', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    if (mongoConnected && mongoose.connection.readyState === 1) {
+      // MongoDB version
+      // Get the Notification model if it exists
+      let Notification;
+      try {
+        Notification = mongoose.model('Notification');
+      } catch (e) {
+        // Model doesn't exist, create schema
+        const notificationSchema = new mongoose.Schema({
+          recipientId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true
+          },
+          senderId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+          },
+          type: String,
+          message: String,
+          taskId: mongoose.Schema.Types.ObjectId,
+          offerId: mongoose.Schema.Types.ObjectId,
+          read: { type: Boolean, default: false },
+          createdAt: { type: Date, default: Date.now }
+        });
+        Notification = mongoose.model('Notification', notificationSchema);
+      }
+      
+      const notifications = await Notification.find({ recipientId: userId })
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .lean();
+      
+      res.json(notifications);
+    } else {
+      // File-based version
+      const notifications = await readData(NOTIFICATIONS_FILE).catch(() => []);
+      
+      const userNotifications = notifications
+        .filter(n => n.recipientId === userId)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 20);
+      
+      res.json(userNotifications);
+    }
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Mark notification as read
+app.post('/api/notifications/:id/read', authenticateToken, async (req, res) => {
+  try {
+    const notificationId = req.params.id;
+    const userId = req.user.id;
+    
+    if (mongoConnected && mongoose.connection.readyState === 1) {
+      // MongoDB version
+      const Notification = mongoose.model('Notification');
+      const notification = await Notification.findById(notificationId);
+      
+      if (!notification) {
+        return res.status(404).json({ message: 'Notification not found' });
+      }
+      
+      if (notification.recipientId.toString() !== userId) {
+        return res.status(403).json({ message: 'Not authorized to update this notification' });
+      }
+      
+      notification.read = true;
+      await notification.save();
+    } else {
+      // File-based version
+      const notifications = await readData(NOTIFICATIONS_FILE);
+      const notificationIndex = notifications.findIndex(n => n.id == notificationId);
+      
+      if (notificationIndex === -1) {
+        return res.status(404).json({ message: 'Notification not found' });
+      }
+      
+      if (notifications[notificationIndex].recipientId !== userId) {
+        return res.status(403).json({ message: 'Not authorized to update this notification' });
+      }
+      
+      notifications[notificationIndex].read = true;
+      await writeData(NOTIFICATIONS_FILE, notifications);
+    }
+    
+    res.status(200).json({ message: 'Notification marked as read' });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Chat Routes
+// -----------
+
+// Create a new chat between users
+app.post('/api/chats/create', authenticateToken, async (req, res) => {
+  try {
+    const { taskId, offerId, recipientId } = req.body;
+    const senderId = req.user.id;
+    
+    if (mongoConnected) {
+      // MongoDB version
+      // Check if task exists
+      const task = await Task.findById(taskId);
+      if (!task) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+      
+      // Verify that one participant is the task owner
+      if (task.userId.toString() !== senderId && task.userId.toString() !== recipientId) {
+        return res.status(403).json({ message: 'One participant must be the task owner' });
+      }
+      
+      // Check if chat already exists for these participants and this task
+      let chat = await Chat.findOne({
+        participants: { $all: [senderId, recipientId] },
+        taskId
+      });
+      
+      if (chat) {
+        return res.status(200).json({ 
+          chatId: chat._id,
+          message: 'Chat already exists' 
+        });
+      }
+      
+      // Create new chat
+      chat = new Chat({
+        participants: [senderId, recipientId],
+        taskId,
+        offerId: offerId || null
+      });
+      
+      await chat.save();
+      
+      res.status(201).json({ 
+        chatId: chat._id,
+        message: 'Chat created successfully' 
+      });
+    } else {
+      // File-based version
+      // Since we don't have a chats.json file setup yet, let's prepare the structure
+      const CHATS_FILE = path.join(DATA_DIR, 'chats.json');
+      const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
+      
+      await createEmptyFileIfNotExists(CHATS_FILE);
+      await createEmptyFileIfNotExists(MESSAGES_FILE);
+      
+      const chats = await readData(CHATS_FILE);
+      
+      // Check if chat already exists for these participants and this task
+      let chat = chats.find(c => 
+        c.participants.includes(senderId) && 
+        c.participants.includes(recipientId) && 
+        c.taskId === taskId
+      );
+      
+      if (chat) {
+        return res.status(200).json({ 
+          chatId: chat.id,
+          message: 'Chat already exists' 
+        });
+      }
+      
+      // Create new chat
+      const newChat = {
+        id: uuidv4(),
+        participants: [senderId, recipientId],
+        taskId,
+        offerId: offerId || null,
+        createdAt: new Date().toISOString()
+      };
+      
+      chats.push(newChat);
+      
+      // Save to file
+      await writeData(CHATS_FILE, chats);
+      
+      res.status(201).json({ 
+        chatId: newChat.id,
+        message: 'Chat created successfully' 
+      });
+    }
+  } catch (error) {
+    console.error('Error creating chat:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get all chats for the authenticated user
+app.get('/api/chats', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    if (mongoConnected) {
+      // MongoDB version
+      const chats = await Chat.find({ participants: userId }).lean();
+      
+      res.json(chats);
+    } else {
+      // File-based version
+      const CHATS_FILE = path.join(DATA_DIR, 'chats.json');
+      await createEmptyFileIfNotExists(CHATS_FILE);
+      
+      const chats = await readData(CHATS_FILE);
+      const userChats = chats.filter(chat => chat.participants.includes(userId));
+      
+      res.json(userChats);
+    }
+  } catch (error) {
+    console.error('Error getting chats:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get messages for a specific chat
+app.get('/api/chats/:chatId/messages', authenticateToken, async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const userId = req.user.id;
+    
+    if (mongoConnected) {
+      // MongoDB version
+      const chat = await Chat.findById(chatId);
+      if (!chat) {
+        return res.status(404).json({ message: 'Chat not found' });
+      }
+      
+      if (!chat.participants.includes(userId)) {
+        return res.status(403).json({ message: 'Not authorized to view messages for this chat' });
+      }
+      
+      const messages = await Message.find({ chatId }).lean();
+      
+      res.json(messages);
+    } else {
+      // File-based version
+      const CHATS_FILE = path.join(DATA_DIR, 'chats.json');
+      const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
+      
+      await createEmptyFileIfNotExists(CHATS_FILE);
+      await createEmptyFileIfNotExists(MESSAGES_FILE);
+      
+      const chats = await readData(CHATS_FILE);
+      const chat = chats.find(c => c.id === chatId);
+      
+      if (!chat) {
+        return res.status(404).json({ message: 'Chat not found' });
+      }
+      
+      if (!chat.participants.includes(userId)) {
+        return res.status(403).json({ message: 'Not authorized to view messages for this chat' });
+      }
+      
+      const messages = await readData(MESSAGES_FILE);
+      const chatMessages = messages.filter(m => m.chatId === chatId);
+      
+      res.json(chatMessages);
+    }
+  } catch (error) {
+    console.error('Error getting messages:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Send a message in a chat
+app.post('/api/chats/:chatId/messages', authenticateToken, async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const { content } = req.body;
+    const senderId = req.user.id;
+    
+    if (!content) {
+      return res.status(400).json({ message: 'Message content is required' });
+    }
+    
+    if (mongoConnected) {
+      // MongoDB version
+      const chat = await Chat.findById(chatId);
+      if (!chat) {
+        return res.status(404).json({ message: 'Chat not found' });
+      }
+      
+      if (!chat.participants.includes(senderId)) {
+        return res.status(403).json({ message: 'Not authorized to send messages in this chat' });
+      }
+      
+      const message = new Message({
+        chatId,
+        senderId,
+        content,
+        createdAt: new Date()
+      });
+      
+      await message.save();
+      
+      res.status(201).json(message);
+    } else {
+      // File-based version
+      const CHATS_FILE = path.join(DATA_DIR, 'chats.json');
+      const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
+      
+      await createEmptyFileIfNotExists(CHATS_FILE);
+      await createEmptyFileIfNotExists(MESSAGES_FILE);
+      
+      const chats = await readData(CHATS_FILE);
+      const chat = chats.find(c => c.id === chatId);
+      
+      if (!chat) {
+        return res.status(404).json({ message: 'Chat not found' });
+      }
+      
+      if (!chat.participants.includes(senderId)) {
+        return res.status(403).json({ message: 'Not authorized to send messages in this chat' });
+      }
+      
+      const messages = await readData(MESSAGES_FILE);
+      
+      const newMessage = {
+        id: uuidv4(),
+        chatId,
+        senderId,
+        content,
+        createdAt: new Date().toISOString()
+      };
+      
+      messages.push(newMessage);
+      
+      await writeData(MESSAGES_FILE, messages);
+      
+      res.status(201).json(newMessage);
+    }
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Static File Handlers
+// ====================
+
+// Serve index.html for root
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// The catchall route MUST BE LAST
+// Catchall Route for Static Files
 app.get('/:page*?', async (req, res, next) => {
   const fullPath = req.path;
   
@@ -659,14 +2032,16 @@ app.get('/:page*?', async (req, res, next) => {
   }
 });
 
-// Start the server
+// Start the Server
 async function startServer() {
   try {
     // Ensure data directory exists
     await ensureDataDirExists();
     
+    // Ensure all data files exist on startup
+    await initializeDataFiles();
+    
     // Start listening
-    const PORT = process.env.PORT || 9000;
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
