@@ -15,25 +15,57 @@ const RENDER_URL = 'https://victormain1.onrender.com';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-for-development-only';
 const PORT = process.env.PORT || 9000;
 
-// MongoDB connection string (use environment variables in production)
-const MONGODB_URI = "mongodb+srv://viswanthsai:EGY4GjKbtoiLXl2f@cluster0.6ndpu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+// MongoDB connection string with updated options
+const MONGODB_URI = "mongodb+srv://viswanthsai:QWEASDZXC1q@cluster0.6ndpu.mongodb.net/victorDB?retryWrites=true&w=majority&appName=Cluster0";
 
-// Connect to MongoDB
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB Atlas'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// Track MongoDB connection status
+let mongoConnected = false;
+
+// Connect to MongoDB with better options
+mongoose.connect(MONGODB_URI, {
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000, 
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  retryWrites: true,
+})
+.then(() => {
+  mongoConnected = true;
+  console.log('Connected to MongoDB Atlas');
+  console.log('Connection state:', mongoose.connection.readyState);
+  console.log('MongoDB host:', mongoose.connection.host);
+})
+.catch(err => {
+  mongoConnected = false;
+  console.error('MongoDB connection error:', err);
+  console.log('Server will continue with file-based storage');
+});
+
+// Add connection event handlers
+mongoose.connection.on('error', err => {
+  console.log('Mongoose connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('Mongoose disconnected');
+});
 
 app.use(cors({
   origin: [
     'https://viswanthsai.github.io', 
     'http://127.0.0.1:5502', 
     'http://localhost:5502',
+    'http://localhost:9000',  // Add this for local testing
     'https://victormain1.onrender.com',  
-    'https://victormain1-1.onrender.com'  // Add this line for your static site
+    'https://victormain1-1.onrender.com'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
+
+// Enable pre-flight across all routes
+app.options('*', cors());
+
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
@@ -107,7 +139,7 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// Server status endpoint
+// First define ALL API routes
 app.get('/api/status', (req, res) => {
   res.json({
     status: 'ok',
@@ -116,25 +148,26 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// Add a route handler for the root path
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Handle all other routes to serve the correct HTML file
-app.get('/:page', (req, res) => {
-  const page = req.params.page;
-  // Check if the requested file exists
-  const filePath = path.join(__dirname, page);
-  
-  if (fs.existsSync(filePath)) {
-    res.sendFile(filePath);
+app.get('/api/db-test', (req, res) => {
+  if (mongoose.connection.readyState === 1) {
+    res.json({ 
+      status: 'connected', 
+      message: 'MongoDB connection successful',
+      details: {
+        host: mongoose.connection.host,
+        name: mongoose.connection.name,
+        models: Object.keys(mongoose.models)
+      }
+    });
   } else {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.status(500).json({ 
+      status: 'disconnected', 
+      message: 'MongoDB not connected',
+      readyState: mongoose.connection.readyState
+    });
   }
 });
 
-// User registration
 app.post('/api/signup', async (req, res) => {
   try {
     const { fullname, email, password } = req.body;
@@ -184,7 +217,6 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
-// User login
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -226,7 +258,6 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Get current user info
 app.get('/api/users/me', authenticateToken, async (req, res) => {
   try {
     const users = await readData(USERS_FILE);
@@ -242,6 +273,16 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error getting current user:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.get('/api/tasks', async (req, res) => {
+  try {
+    const tasks = await Task.find();
+    res.json(tasks);
+  } catch (error) {
+    console.error('Error in /api/tasks:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
@@ -280,17 +321,6 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
     res.json(userWithoutPassword);
   } catch (error) {
     console.error(`Error in PUT /api/users/${req.params.id}:`, error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// Get all tasks
-app.get('/api/tasks', async (req, res) => {
-  try {
-    const tasks = await Task.find();
-    res.json(tasks);
-  } catch (error) {
-    console.error('Error in /api/tasks:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -443,11 +473,6 @@ app.post('/api/tasks/:id/accept', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'You cannot accept your own task' });
     }
     
-    // Check if user is accepting their own task
-    if (task.userId === parseInt(userId)) {
-      return res.status(400).json({ message: 'You cannot accept your own task' });
-    }
-    
     // Update task
     const updatedTask = {
       ...task,
@@ -540,6 +565,32 @@ app.get('/api/my-accepted-tasks', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error in /api/my-accepted-tasks:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Then AFTER all API routes, define static file handlers
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// The catchall route MUST BE LAST
+app.get('/:page*?', async (req, res, next) => {
+  const fullPath = req.path;
+  
+  // Skip API routes - let them be handled by their specific handlers
+  if (fullPath.startsWith('/api/')) {
+    return next();
+  }
+  
+  // Check if the requested file exists
+  const filePath = path.join(__dirname, req.params.page || 'index.html');
+  
+  try {
+    await fs.access(filePath);
+    res.sendFile(filePath);
+  } catch (error) {
+    // File doesn't exist, serve index.html
+    res.sendFile(path.join(__dirname, 'index.html'));
   }
 });
 

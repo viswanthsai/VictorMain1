@@ -245,5 +245,33 @@
     "acceptedAt": "2025-02-21T10:15:00.000Z",
     "acceptedBy": "gudipudi",
     "completedAt": "2025-03-01T16:45:00.000Z"
+  },
+  {
+    "id": 16,
+    "title": "Cleaning",
+    "description": "Home Cleaning",
+    "category": "Home Services",
+    "location": "Vijayawada",
+    "budget": 700,
+    "deadline": null,
+    "status": "Open",
+    "userId": 11,
+    "createdBy": "gudipudi",
+    "createdAt": "2025-03-04T06:18:10.138Z",
+    "updatedAt": "2025-03-04T06:18:10.138Z"
+  },
+  {
+    "id": 17,
+    "title": "AC Repair",
+    "description": "PROBLEM WITH AC",
+    "category": "Other",
+    "location": "GUNTUR",
+    "budget": 1000,
+    "deadline": null,
+    "status": "Open",
+    "userId": 2,
+    "createdBy": "ViswanthSai",
+    "createdAt": "2025-03-04T07:18:44.461Z",
+    "updatedAt": "2025-03-04T07:18:44.461Z"
   }
 ]

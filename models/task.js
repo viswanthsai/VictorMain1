@@ -1,9 +1,11 @@
 const mongoose = require('mongoose');
 
+// Define Task schema
 const taskSchema = new mongoose.Schema({
   title: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   description: {
     type: String,
@@ -11,11 +13,17 @@ const taskSchema = new mongoose.Schema({
   },
   category: {
     type: String,
+    required: true,
     default: 'Other'
   },
   location: {
     type: String,
     default: 'Remote'
+  },
+  status: {
+    type: String,
+    enum: ['Open', 'In Progress', 'Completed', 'Cancelled'],
+    default: 'Open'
   },
   budget: {
     type: Number,
@@ -24,11 +32,6 @@ const taskSchema = new mongoose.Schema({
   deadline: {
     type: Date,
     default: null
-  },
-  status: {
-    type: String,
-    enum: ['Open', 'In Progress', 'Completed'],
-    default: 'Open'
   },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -39,6 +42,23 @@ const taskSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  acceptedById: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  acceptedBy: {
+    type: String,
+    default: null
+  },
+  acceptedAt: {
+    type: Date,
+    default: null
+  },
+  completedAt: {
+    type: Date,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -46,13 +66,9 @@ const taskSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
-  },
-  acceptedById: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  acceptedAt: Date,
-  completedAt: Date
+  }
 });
 
-module.exports = mongoose.model('Task', taskSchema);
+const Task = mongoose.model('Task', taskSchema);
+
+module.exports = Task;
