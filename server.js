@@ -222,11 +222,17 @@ app.post('/api/signup', async (req, res) => {
       { expiresIn: '24h' }
     );
     
+    // Before sending response
+    console.log('Sending response to client:', {
+      token,
+      userId: user._id,
+      username: user.fullname  // Check if this exists
+    });
+    
     res.status(201).json({
       token,
       userId: user._id,
-      username: user.fullname,
-      message: 'User registered successfully'
+      username: user.fullname  // Should match what the client expects
     });
   } catch (error) {
     console.error('Error in /api/signup:', error);

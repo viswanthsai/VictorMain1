@@ -72,3 +72,10 @@
     return await response.json();
   }
 })();
+
+// In your auth controller or route handler
+res.status(201).json({
+  token: token,
+  userId: user._id,
+  username: user.fullname // Transform fullname to username for the client
+});
