@@ -81,14 +81,31 @@ async function ensureDataDirExists() {
   const dataDir = path.join(__dirname, 'data');
   try {
     await fs.access(dataDir);
+    console.log('Data directory exists:', dataDir);
   } catch (error) {
     if (error.code === 'ENOENT') {
+      console.log('Creating data directory:', dataDir);
       await fs.mkdir(dataDir, { recursive: true });
       
       // Create empty data files if they don't exist
-      await fs.writeFile(USERS_FILE, '[]');
-      await fs.writeFile(TASKS_FILE, '[]');
+      const usersPath = path.join(dataDir, 'users.json');
+      const tasksPath = path.join(dataDir, 'tasks.json');
+      
+      try {
+        await fs.access(usersPath);
+      } catch (e) {
+        await fs.writeFile(usersPath, '[]');
+        console.log('Created empty users.json file');
+      }
+      
+      try {
+        await fs.access(tasksPath);
+      } catch (e) {
+        await fs.writeFile(tasksPath, '[]');
+        console.log('Created empty tasks.json file');
+      }
     } else {
+      console.error('Error accessing data directory:', error);
       throw error;
     }
   }
@@ -276,12 +293,24 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
   }
 });
 
+// Get all tasks
 app.get('/api/tasks', async (req, res) => {
   try {
-    const tasks = await Task.find();
+    let tasks;
+    
+    if (mongoConnected && mongoose.connection.readyState === 1) {
+      // Use MongoDB
+      console.log('Getting tasks from MongoDB');
+      tasks = await Task.find().lean();
+    } else {
+      // Use file-based storage
+      console.log('Getting tasks from file storage');
+      tasks = await readData(TASKS_FILE);
+    }
+    
     res.json(tasks);
   } catch (error) {
-    console.error('Error in /api/tasks:', error);
+    console.error('Error in GET /api/tasks:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

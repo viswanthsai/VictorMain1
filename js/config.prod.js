@@ -8,19 +8,8 @@
   
   // Initialize API config
   window.API_CONFIG = {
-    API_URL: RENDER_URL,
-    
-    // Method to check connection
-    refreshConnection: async function() {
-      try {
-        const response = await fetch(`${RENDER_URL}/api/status`);
-        return response.ok;
-      } catch (error) {
-        console.error('Error connecting to API:', error);
-        return false;
-      }
-    }
+    API_URL: RENDER_URL
   };
   
-  console.log('Production config loaded, using API at:', window.API_CONFIG.API_URL);
+  console.log('Production API_CONFIG loaded');
 })();

@@ -13,7 +13,10 @@
 
   // Initialize API config
   window.API_CONFIG = {
-    API_URL: localStorage.getItem('api_url') || API_URLS[0],
+    API_URL: window.location.hostname === 'victormain1.onrender.com' || 
+            window.location.hostname === 'victormain1-1.onrender.com'
+      ? 'https://victormain1.onrender.com'  // Production URL
+      : 'http://localhost:9000',  // Development URL
     
     // Try to connect to each API URL until one works
     refreshConnection: async function() {
@@ -85,6 +88,8 @@
   document.addEventListener('DOMContentLoaded', function() {
     window.API_CONFIG.refreshConnection();
   });
+  
+  console.log('API_CONFIG loaded:', window.API_CONFIG.API_URL);
 })();
 
 // Use production config if on GitHub Pages

@@ -83,10 +83,13 @@ document.addEventListener('DOMContentLoaded', function() {
    * @returns {Promise} Promise resolving to the API response
    */
   async function registerUser(fullname, email, password) {
-    // Don't use the current hostname for API URL when on the static site
-    const API_URL = window.location.hostname.includes('victormain1-1.onrender.com')
-      ? 'https://victormain1.onrender.com'  // Always use the API server URL
+    // Get API URL from config or use the deployed URL
+    const API_URL = window.location.hostname === 'victormain1.onrender.com' || 
+                    window.location.hostname === 'victormain1-1.onrender.com'
+      ? 'https://victormain1.onrender.com'  // Use the API server URL in production
       : (window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000');
+    
+    console.log('Using API URL:', API_URL);
     
     // Show loading state
     const submitButton = signupForm.querySelector('button[type="submit"]');
