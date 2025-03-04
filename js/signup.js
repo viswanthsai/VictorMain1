@@ -131,8 +131,8 @@ document.addEventListener('DOMContentLoaded', function() {
   function handleRegistrationSuccess(response) {
     // Save auth data in localStorage
     localStorage.setItem('token', response.token);
-    localStorage.setItem('userId', response.id);
-    localStorage.setItem('username', response.fullname);
+    localStorage.setItem('userId', response.userId); // Changed from response.id
+    localStorage.setItem('username', response.username); // Changed from response.fullname
     
     // Hide the form
     signupForm.classList.add('hidden');
@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const messageContent = formMessage.querySelector('div');
     messageContent.innerHTML = `
       <p class="font-medium text-success">Account created successfully!</p>
-      <p class="text-gray-600 mt-1">Welcome, ${response.fullname}! Redirecting you to the homepage...</p>
+      <p class="text-gray-600 mt-1">Welcome, ${response.username}! Redirecting you to the homepage...</p>
     `;
     
     // Redirect after a delay
