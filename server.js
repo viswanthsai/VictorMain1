@@ -232,7 +232,7 @@ app.post('/api/signup', async (req, res) => {
     res.status(201).json({
       token,
       userId: user._id,
-      username: user.fullname  // Should match what the client expects
+      username: user.fullname  // This is correct
     });
   } catch (error) {
     console.error('Error in /api/signup:', error);
@@ -283,16 +283,33 @@ app.post('/api/login', async (req, res) => {
 
 app.get('/api/users/me', authenticateToken, async (req, res) => {
   try {
-    const users = await readData(USERS_FILE);
-    const user = users.find(u => u.id === req.user.id);
-    
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    if (mongoConnected && mongoose.connection.readyState === 1) {
+      // Using MongoDB
+      const user = await User.findById(req.user.id).lean();
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Return user data without password
+      const { password, ...userData } = user;
+      return res.json({
+        ...userData,
+        username: user.fullname // Add this explicitly
+      });
+    } else {
+      // File-based storage fallback
+      const users = await readData(USERS_FILE);
+      const user = users.find(u => u.id === req.user.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Return user data without password
+      const { password, ...userData } = user;
+      return res.json(userData);
     }
-    
-    // Return user data without password
-    const { password, ...userData } = user;
-    res.json(userData);
   } catch (error) {
     console.error('Error getting current user:', error);
     res.status(500).json({ message: 'Server error' });

@@ -217,6 +217,11 @@ const Victor = {
       localStorage.removeItem('userId');
       localStorage.removeItem('username');
       
+      // Update UI immediately before redirect
+      if (window.updateUserDisplay) {
+        window.updateUserDisplay();
+      }
+      
       // Redirect to home page or login page
       window.location.href = 'index.html';
     },

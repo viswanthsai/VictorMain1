@@ -21,6 +21,7 @@
   <script src="js/notification.js"></script>
   <script src="js/task-utils.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/user-display.js"></script>
   <!-- Configure Tailwind -->
   <script>
     tailwind.config = {
@@ -414,13 +415,13 @@
                 </div>
               </div>
               <div class="flex space-x-2">
-                <select id="my-task-status-filter" class="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                <select id="my-task-status-filter" aria-label="Filter tasks by status" class="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
                   <option value="">All Status</option>
                   <option value="Open">Open</option>
                   <option value="In Progress">In Progress</option>
                   <option value="Completed">Completed</option>
                 </select>
-                <select id="my-task-sort" class="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                <select id="my-task-sort" aria-label="Sort tasks by" class="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
                   <option value="newest">Newest First</option>
                   <option value="oldest">Oldest First</option>
                   <option value="budget-high">Budget: High to Low</option>
@@ -867,13 +868,12 @@
     function initializeDashboard() {
       // Set username
       const username = localStorage.getItem('username') || 'User';
-      const welcomeName = document.getElementById('welcome-name');
+      document.getElementById('welcome-name').textContent = username;
       const usernameDisplay = document.getElementById('username-display');
       const userNameDropdown = document.getElementById('user-name-dropdown');
       const userEmailDropdown = document.getElementById('user-email-dropdown');
       const userAvatar = document.getElementById('user-avatar');
       
-      if (welcomeName) welcomeName.textContent = username;
       if (usernameDisplay) usernameDisplay.textContent = username;
       if (userNameDropdown) userNameDropdown.textContent = username;
       if (userAvatar) userAvatar.textContent = username.charAt(0).toUpperCase();

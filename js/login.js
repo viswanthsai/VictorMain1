@@ -121,6 +121,16 @@ document.addEventListener('DOMContentLoaded', function() {
     localStorage.setItem('userId', response.id);
     localStorage.setItem('username', response.fullname);
     
+    // After successful login
+    localStorage.setItem('token', response.token);
+    localStorage.setItem('userId', response.userId);
+    localStorage.setItem('username', response.username);
+
+    // Update UI immediately
+    if (window.updateUserDisplay) {
+      window.updateUserDisplay();
+    }
+    
     // Hide the form
     loginForm.classList.add('hidden');
     

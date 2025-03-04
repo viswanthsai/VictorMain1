@@ -131,8 +131,13 @@ document.addEventListener('DOMContentLoaded', function() {
   function handleRegistrationSuccess(response) {
     // Save auth data in localStorage
     localStorage.setItem('token', response.token);
-    localStorage.setItem('userId', response.userId); // Changed from response.id
-    localStorage.setItem('username', response.username); // Changed from response.fullname
+    localStorage.setItem('userId', response.userId);
+    localStorage.setItem('username', response.username);
+    
+    // Update UI immediately
+    if (window.updateUserDisplay) {
+      window.updateUserDisplay();
+    }
     
     // Hide the form
     signupForm.classList.add('hidden');
