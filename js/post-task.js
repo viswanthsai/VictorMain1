@@ -176,3 +176,189 @@ const PostTaskUtils = {
 
 // Make utilities available globally
 window.PostTaskUtils = PostTaskUtils;
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Check if user is logged in
+  checkLoginStatus();
+  
+  // Setup rich text editor
+  setupRichTextEditor();
+  
+  // Setup file upload functionality
+  setupFileUpload();
+  
+  // Setup preview modal
+  setupPreviewModal();
+  
+  // Load saved draft if available
+  loadSavedDraft();
+  
+  // Form submission handler
+  document.getElementById('task-form').addEventListener('submit', handleFormSubmit);
+  
+  // Save draft button handler
+  document.getElementById('save-draft-button').addEventListener('click', saveDraft);
+  
+  // Setup mobile menu toggle
+  document.getElementById('mobile-menu-button').addEventListener('click', function() {
+    document.getElementById('mobile-menu').classList.toggle('hidden');
+  });
+  
+  // User menu dropdown toggle
+  const userMenuButton = document.getElementById('user-menu-button');
+  const userDropdown = document.getElementById('user-dropdown');
+  
+  if (userMenuButton && userDropdown) {
+    userMenuButton.addEventListener('click', function() {
+      userDropdown.classList.toggle('hidden');
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+      if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
+        userDropdown.classList.add('hidden');
+      }
+    });
+  }
+  
+  // Setup unsaved changes warning
+  setupUnsavedChangesWarning();
+});
+
+// Check login status and redirect if not logged in
+function checkLoginStatus() {
+  const token = localStorage.getItem('token');
+  const username = localStorage.getItem('username');
+  const userEmail = localStorage.getItem('userEmail');
+  
+  if (!token) {
+    window.location.href = 'login.html?redirect=post-task.html&message=Please login to post a task';
+    return;
+  }
+  
+  // Update user info in UI
+  if (username) {
+    const usernameDom = document.getElementById('username-display');
+    const userAvatar = document.getElementById('user-avatar');
+    const userDropdownName = document.getElementById('user-name-dropdown');
+    const userDropdownEmail = document.getElementById('user-email-dropdown');
+    
+    if (usernameDom) usernameDom.textContent = username;
+    if (userAvatar) userAvatar.textContent = username.charAt(0).toUpperCase();
+    if (userDropdownName) userDropdownName.textContent = username;
+    if (userDropdownEmail && userEmail) userDropdownEmail.textContent = userEmail;
+  }
+  
+  // Setup logout button
+  const logoutButton = document.getElementById('logout-button');
+  if (logoutButton) {
+    logoutButton.addEventListener('click', function() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userEmail');
+      window.location.href = 'login.html';
+    });
+  }
+}
+
+// Setup rich text editor
+function setupRichTextEditor() {
+  const editor = document.getElementById('description-editor');
+  const hiddenInput = document.getElementById('description');
+  const toolbarButtons = document.querySelectorAll('[data-format]');
+  
+  // Set initial value if available
+  if (hiddenInput.value) {
+    editor.innerHTML = hiddenInput.value;
+  }
+  
+  // Update hidden input when editor content changes
+  editor.addEventListener('input', function() {
+    hiddenInput.value = editor.innerHTML;
+  });
+  
+  // Toolbar button functionality
+  toolbarButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const format = this.dataset.format;
+      document.execCommand(format, false, null);
+      editor.focus();
+    });
+  });
+}
+
+// Form validation
+function validateForm() {
+  // Reset previous validation errors
+  clearValidationErrors();
+  
+  let isValid = true;
+  const title = document.getElementById('title').value.trim();
+  const description = document.getElementById('description-editor').textContent.trim();
+  const category = document.getElementById('category').value;
+  const location = document.getElementById('location').value.trim();
+  
+  // Validate title
+  if (!title) {
+    showValidationError('title', 'Title is required');
+    isValid = false;
+  } else if (title.length > 75) {
+    showValidationError('title', 'Title must be 75 characters or less');
+    isValid = false;
+  }
+  
+  // Validate description
+  if (!description) {
+    showValidationError('description-editor', 'Description is required');
+    isValid = false;
+  } else if (description.length < 30) {
+    showValidationError('description-editor', 'Description should be at least 30 characters');
+    isValid = false;
+  }
+  
+  // Validate category
+  if (!category) {
+    showValidationError('category', 'Please select a category');
+    isValid = false;
+  }
+  
+  // Validate location
+  if (!location) {
+    showValidationError('location', 'Location is required');
+    isValid = false;
+  }
+  
+  return isValid;
+}
+
+// Show validation error for a field
+function showValidationError(fieldId, message) {
+  const field = document.getElementById(fieldId);
+  
+  // Add error class to the field
+  field.classList.add('border-red-500');
+  
+  // Create and append error message
+  const errorMsg = document.createElement('p');
+  errorMsg.className = 'text-red-500 text-xs mt-1 validation-error';
+  errorMsg.textContent = message;
+  
+  field.parentNode.appendChild(errorMsg);
+  
+  // Focus the first field with error
+  if (!document.querySelector('.border-red-500:focus')) {
+    field.focus();
+  }
+}
+
+// Clear all validation errors
+function clearValidationErrors() {
+  // Remove error classes from fields
+  const errorFields = document.querySelectorAll('.border-red-500');
+  errorFields.forEach(field => field.classList.remove('border-red-500'));
+  
+  // Remove error messages
+  const errorMsgs = document.querySelectorAll('.validation-error');
+  errorMsgs.forEach(msg => msg.remove());
+}

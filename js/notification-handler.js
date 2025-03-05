@@ -205,3 +205,160 @@ function markNotificationAsRead(notificationId) {
     return false;
   });
 }
+
+/**
+ * Notification Handler
+ * A simple notification system for displaying messages to users
+ */
+
+// Create the notifications container if it doesn't exist
+document.addEventListener('DOMContentLoaded', function() {
+  if (!document.getElementById('notifications-container')) {
+    const container = document.createElement('div');
+    container.id = 'notifications-container';
+    container.className = 'fixed bottom-4 right-4 z-50 flex flex-col gap-3';
+    document.body.appendChild(container);
+  }
+});
+
+// Namespace for notification functionality
+window.notifications = {
+  /**
+   * Display a notification
+   * @param {string} message - The message to display
+   * @param {string} type - Type of notification: 'success', 'error', 'warning', 'info'
+   * @param {number} duration - Duration in milliseconds (default: 4000)
+   */
+  notify: function(message, type = 'info', duration = 4000) {
+    // Get or create container
+    let container = document.getElementById('notifications-container');
+    
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'notifications-container';
+      container.className = 'fixed bottom-4 right-4 z-50 flex flex-col gap-3';
+      document.body.appendChild(container);
+    }
+    
+    // Create unique ID for this notification
+    const id = 'notification-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.id = id;
+    notification.className = `max-w-sm w-full p-4 rounded-lg shadow-lg transform translate-y-4 opacity-0 transition-all duration-300 ease-in-out ${
+      type === 'success' ? 'bg-green-500 text-white' :
+      type === 'error' ? 'bg-red-500 text-white' :
+      type === 'warning' ? 'bg-amber-500 text-white' : 
+      'bg-blue-500 text-white' // info
+    }`;
+    
+    // Set notification content
+    notification.innerHTML = `
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <i class="fas ${
+            type === 'success' ? 'fa-check-circle' :
+            type === 'error' ? 'fa-exclamation-circle' :
+            type === 'warning' ? 'fa-exclamation-triangle' :
+            'fa-info-circle' // info
+          } mr-2"></i>
+        </div>
+        <div class="ml-2 flex-1">${message}</div>
+        <div class="ml-4 flex-shrink-0">
+          <button type="button" class="text-white focus:outline-none" onclick="notifications.close('${id}')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+      ${duration > 0 ? `<div class="mt-2 w-full bg-white bg-opacity-30 rounded-full h-1">
+        <div class="bg-white h-1 rounded-full progress-bar" style="width: 100%"></div>
+      </div>` : ''}
+    `;
+    
+    // Add to container
+    container.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+      notification.classList.remove('translate-y-4', 'opacity-0');
+    }, 10);
+    
+    // Animate progress bar
+    if (duration > 0) {
+      const progressBar = notification.querySelector('.progress-bar');
+      if (progressBar) {
+        progressBar.animate(
+          [
+            { width: '100%' },
+            { width: '0%' }
+          ],
+          {
+            duration: duration,
+            easing: 'linear',
+            fill: 'forwards'
+          }
+        );
+      }
+      
+      // Auto-close after duration
+      setTimeout(() => {
+        this.close(id);
+      }, duration);
+    }
+    
+    // Return the notification ID
+    return id;
+  },
+  
+  /**
+   * Close a specific notification
+   * @param {string} id - The notification ID to close
+   */
+  close: function(id) {
+    const notification = document.getElementById(id);
+    
+    if (notification) {
+      // Animate out
+      notification.classList.add('translate-y-4', 'opacity-0');
+      
+      // Remove after animation
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }
+  },
+  
+  /**
+   * Close all notifications
+   */
+  closeAll: function() {
+    const container = document.getElementById('notifications-container');
+    
+    if (container) {
+      const notifications = container.querySelectorAll('[id^="notification-"]');
+      notifications.forEach(notification => {
+        this.close(notification.id);
+      });
+    }
+  }
+};
+
+// Shorthand methods for different notification types
+window.notifications.success = function(message, duration) {
+  return this.notify(message, 'success', duration);
+};
+
+window.notifications.error = function(message, duration) {
+  return this.notify(message, 'error', duration);
+};
+
+window.notifications.warning = function(message, duration) {
+  return this.notify(message, 'warning', duration);
+};
+
+window.notifications.info = function(message, duration) {
+  return this.notify(message, 'info', duration);
+};

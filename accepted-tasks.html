@@ -50,6 +50,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <!-- Custom chat icon CSS -->
   <link rel="stylesheet" href="/css/chat-icon.css">
+  <!-- Sweet Alert for better notifications -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans pt-16">
   <!-- Header -->
@@ -121,6 +123,9 @@
               <a href="profile.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
                 <i class="fas fa-user-circle w-5 text-gray-400 mr-2"></i> My Profile
               </a>
+              <a href="accepted-tasks.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-check-circle w-5 text-gray-400 mr-2"></i> Tasks I'm Working On
+              </a>
               <div class="border-t border-gray-100 my-1"></div>
               <a href="#" id="logout-button" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
                 <i class="fas fa-sign-out-alt w-5 text-gray-400 mr-2"></i> Logout
@@ -189,6 +194,45 @@
         </div>
       </div>
 
+      <!-- Task progress summary cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- In Progress Tasks Card -->
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="font-medium text-gray-600">In Progress</h3>
+            <span class="bg-yellow-50 text-yellow-600 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium">
+              <i class="fas fa-spinner mr-1.5"></i>Active
+            </span>
+          </div>
+          <div class="text-3xl font-bold text-gray-900 mb-1" id="in-progress-count">0</div>
+          <p class="text-sm text-gray-500">Tasks currently in progress</p>
+        </div>
+        
+        <!-- Completed Tasks Card -->
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="font-medium text-gray-600">Completed</h3>
+            <span class="bg-green-50 text-green-600 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium">
+              <i class="fas fa-check-circle mr-1.5"></i>Finished
+            </span>
+          </div>
+          <div class="text-3xl font-bold text-gray-900 mb-1" id="completed-count">0</div>
+          <p class="text-sm text-gray-500">Tasks you've completed</p>
+        </div>
+        
+        <!-- Earnings Estimate Card -->
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="font-medium text-gray-600">Potential Earnings</h3>
+            <span class="bg-blue-50 text-blue-600 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium">
+              <i class="fas fa-rupee-sign mr-1.5"></i>Estimate
+            </span>
+          </div>
+          <div class="text-3xl font-bold text-gray-900 mb-1" id="earnings-count">₹0</div>
+          <p class="text-sm text-gray-500">Based on your active tasks</p>
+        </div>
+      </div>
+
       <!-- Task filter and sort options -->
       <div class="bg-white rounded-xl shadow-sm p-4 mb-6 border border-gray-100">
         <div class="flex flex-wrap justify-between gap-4">
@@ -198,6 +242,13 @@
               <option value="In Progress" selected>In Progress</option>
               <option value="Completed">Completed</option>
             </select>
+            
+            <select id="filter-deadline" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
+              <option value="">All Deadlines</option>
+              <option value="upcoming">Upcoming (7 days)</option>
+              <option value="urgent">Urgent (3 days)</option>
+              <option value="overdue">Overdue</option>
+            </select>
           </div>
           <div class="flex items-center space-x-2">
             <label for="sort-by" class="text-gray-600">Sort by:</label>
@@ -205,6 +256,8 @@
               <option value="newest">Recently Accepted</option>
               <option value="oldest">Oldest First</option>
               <option value="deadline">Deadline</option>
+              <option value="budget-high">Budget (High to Low)</option>
+              <option value="budget-low">Budget (Low to High)</option>
             </select>
           </div>
         </div>
@@ -231,6 +284,15 @@
       <!-- Tasks container -->
       <div id="tasks-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
         <!-- Task cards will be inserted here -->
+      </div>
+    </div>
+    
+    <!-- Task details modal -->
+    <div id="task-detail-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-auto">
+        <div class="p-6" id="modal-content">
+          <!-- Modal content will be inserted here -->
+        </div>
       </div>
     </div>
   </main>
@@ -321,10 +383,21 @@
       
       // Setup filter and sort handlers
       document.getElementById('filter-status').addEventListener('change', filterAndSortTasks);
+      document.getElementById('filter-deadline').addEventListener('change', filterAndSortTasks); 
       document.getElementById('sort-by').addEventListener('change', filterAndSortTasks);
       
       // Load user's accepted tasks
       loadAcceptedTasks();
+      
+      // Setup modal close when clicking outside
+      const modal = document.getElementById('task-detail-modal');
+      if (modal) {
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) {
+            closeTaskModal();
+          }
+        });
+      }
     });
     
     // Check login status and update UI accordingly
@@ -450,39 +523,61 @@
           throw new Error('Authentication required');
         }
         
-        // Try to get tasks from my-tasks endpoint first
+        // First try the specific endpoint for accepted tasks
         try {
-          const response = await fetch(`${API_URL}/api/my-tasks`, {
+          const response = await fetch(`${API_URL}/api/my-accepted-tasks`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
           });
           
-          if (!response.ok) {
-            throw new Error('Failed to fetch tasks');
+          if (response.ok) {
+            acceptedTasks = await response.json();
+            console.log('Loaded tasks from my-accepted-tasks endpoint:', acceptedTasks.length);
+          } else {
+            throw new Error('Failed to fetch from my-accepted-tasks endpoint');
           }
-          
-          // Filter tasks to only show those accepted by current user
-          const allMyTasks = await response.json();
-          acceptedTasks = allMyTasks.filter(task => 
-            task.acceptedById == userId && 
-            (task.status === 'In Progress' || task.status === 'Completed')
-          );
         } catch (error) {
-          console.warn('Failed to fetch from my-tasks endpoint, trying alternative:', error);
+          console.warn('Error with my-accepted-tasks endpoint, trying alternatives:', error);
           
-          // Fallback to getting all tasks and filtering client-side
-          const response = await fetch(`${API_URL}/api/tasks`);
-          
-          if (!response.ok) {
-            throw new Error('Failed to fetch tasks');
+          // Try to get tasks from my-tasks endpoint
+          try {
+            const response = await fetch(`${API_URL}/api/my-tasks`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            if (!response.ok) {
+              throw new Error('Failed to fetch tasks');
+            }
+            
+            // Filter tasks to only show those accepted by current user
+            const allMyTasks = await response.json();
+            acceptedTasks = allMyTasks.filter(task => 
+              task.acceptedById == userId && 
+              (task.status === 'In Progress' || task.status === 'Completed')
+            );
+            
+            console.log('Loaded tasks from my-tasks endpoint:', acceptedTasks.length);
+          } catch (error) {
+            console.warn('Failed to fetch from my-tasks endpoint, trying all tasks:', error);
+            
+            // Fallback to getting all tasks and filtering client-side
+            const response = await fetch(`${API_URL}/api/tasks`);
+            
+            if (!response.ok) {
+              throw new Error('Failed to fetch tasks');
+            }
+            
+            const allTasks = await response.json();
+            acceptedTasks = allTasks.filter(task => 
+              task.acceptedById == userId && 
+              (task.status === 'In Progress' || task.status === 'Completed')
+            );
+            
+            console.log('Loaded tasks from all tasks endpoint:', acceptedTasks.length);
           }
-          
-          const allTasks = await response.json();
-          acceptedTasks = allTasks.filter(task => 
-            task.acceptedById == userId && 
-            (task.status === 'In Progress' || task.status === 'Completed')
-          );
         }
         
         // Hide loading container
@@ -496,6 +591,9 @@
         
         // Apply initial filtering and sorting
         filterAndSortTasks();
+        
+        // Update task count summaries
+        updateTaskSummary();
         
         // Show tasks container
         tasksContainer.classList.remove('hidden');
@@ -525,16 +623,72 @@
       }
     }
     
+    // Update task summary counts
+    function updateTaskSummary() {
+      const inProgressCount = document.getElementById('in-progress-count');
+      const completedCount = document.getElementById('completed-count');
+      const earningsCount = document.getElementById('earnings-count');
+      
+      // Count tasks by status
+      const inProgressTasks = acceptedTasks.filter(task => task.status === 'In Progress');
+      const completedTasks = acceptedTasks.filter(task => task.status === 'Completed');
+      
+      // Calculate potential earnings (from tasks in progress)
+      const potentialEarnings = inProgressTasks.reduce((total, task) => {
+        return total + (task.budget || 0);
+      }, 0);
+      
+      // Update the UI
+      if (inProgressCount) inProgressCount.textContent = inProgressTasks.length;
+      if (completedCount) completedCount.textContent = completedTasks.length;
+      if (earningsCount) earningsCount.textContent = `₹${potentialEarnings}`;
+    }
+    
     // Filter and sort the accepted tasks
     function filterAndSortTasks() {
       const statusFilter = document.getElementById('filter-status').value;
+      const deadlineFilter = document.getElementById('filter-deadline').value;
       const sortBy = document.getElementById('sort-by').value;
       
       // Apply filters
       let filteredTasks = [...acceptedTasks];
       
+      // Status filter
       if (statusFilter) {
         filteredTasks = filteredTasks.filter(task => task.status === statusFilter);
+      }
+      
+      // Deadline filter
+      if (deadlineFilter) {
+        const now = new Date();
+        const threeDaysLater = new Date(now);
+        threeDaysLater.setDate(now.getDate() + 3);
+        const sevenDaysLater = new Date(now);
+        sevenDaysLater.setDate(now.getDate() + 7);
+        
+        switch (deadlineFilter) {
+          case 'urgent':
+            filteredTasks = filteredTasks.filter(task => {
+              if (!task.deadline) return false;
+              const deadline = new Date(task.deadline);
+              return deadline <= threeDaysLater && deadline > now;
+            });
+            break;
+          case 'upcoming':
+            filteredTasks = filteredTasks.filter(task => {
+              if (!task.deadline) return false;
+              const deadline = new Date(task.deadline);
+              return deadline <= sevenDaysLater && deadline > now;
+            });
+            break;
+          case 'overdue':
+            filteredTasks = filteredTasks.filter(task => {
+              if (!task.deadline) return false;
+              const deadline = new Date(task.deadline);
+              return deadline < now;
+            });
+            break;
+        }
       }
       
       // Apply sorting
@@ -552,6 +706,12 @@
             if (!b.deadline) return -1;
             return new Date(a.deadline) - new Date(b.deadline);
           });
+          break;
+        case 'budget-high':
+          filteredTasks.sort((a, b) => (b.budget || 0) - (a.budget || 0));
+          break;
+        case 'budget-low':
+          filteredTasks.sort((a, b) => (a.budget || 0) - (b.budget || 0));
           break;
       }
       
@@ -595,10 +755,37 @@
       // Determine the status badge class
       let statusClass = 'bg-green-50 text-green-600';
       let statusIcon = 'fa-door-open';
+      let progressBarColor = 'bg-green-500';
+      let progressBarWidth = '100%';
       
       if (task.status === 'In Progress') {
         statusClass = 'bg-yellow-50 text-yellow-600';
         statusIcon = 'fa-spinner';
+        progressBarColor = 'bg-yellow-500';
+        
+        // Calculate progress if deadline exists
+        if (task.deadline) {
+          const now = new Date();
+          const acceptedDate = new Date(task.acceptedAt || task.createdAt);
+          const deadlineDate = new Date(task.deadline);
+          
+          // Calculate progress percentage based on time elapsed
+          const totalDuration = deadlineDate - acceptedDate;
+          const elapsedDuration = now - acceptedDate;
+          const progressPercentage = Math.min(100, Math.max(0, (elapsedDuration / totalDuration) * 100));
+          
+          progressBarWidth = `${progressPercentage}%`;
+          
+          // Change color based on urgency
+          if (progressPercentage > 75) {
+            progressBarColor = 'bg-red-500';
+          } else if (progressPercentage > 50) {
+            progressBarColor = 'bg-orange-500';
+          }
+        } else {
+          // No deadline, show 50% progress
+          progressBarWidth = '50%';
+        }
       } else if (task.status === 'Completed') {
         statusClass = 'bg-gray-50 text-gray-600';
         statusIcon = 'fa-check-circle';
@@ -608,12 +795,24 @@
       const acceptedDate = task.acceptedAt ? formatDate(task.acceptedAt, true) : 'Recently';
       const deadline = task.deadline ? formatDate(task.deadline) : 'No deadline';
       
+      // Check if deadline is past
+      let deadlineClass = '';
+      let deadlineIcon = '';
+      if (task.deadline && new Date(task.deadline) < new Date() && task.status === 'In Progress') {
+        deadlineClass = 'text-red-600 font-semibold';
+        deadlineIcon = '<i class="fas fa-exclamation-circle mr-1"></i>';
+      }
+      
+      // Get any offer data
+      const offerInfo = task.acceptedOfferId ? 
+        `<div class="text-xs bg-green-50 text-green-600 px-2 py-1 rounded">Your offer was accepted!</div>` : '';
+      
       // Card content
       card.innerHTML = `
         <div class="p-6">
           <div class="flex justify-between items-start mb-4">
             <h3 class="font-semibold text-lg">
-              <a href="task-detail.html?id=${task.id}" class="hover:text-primary transition-colors">${task.title}</a>
+              ${task.title}
             </h3>
             <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusClass}">
               <i class="fas ${statusIcon} mr-1.5"></i>${task.status}
@@ -621,6 +820,11 @@
           </div>
           
           <p class="text-gray-600 text-sm mb-4 line-clamp-2">${task.description}</p>
+          
+          ${task.status === 'In Progress' ? `
+          <div class="w-full bg-gray-200 rounded-full h-2 mb-4">
+            <div class="h-2 rounded-full ${progressBarColor}" style="width: ${progressBarWidth}"></div>
+          </div>` : ''}
           
           <div class="flex items-center text-sm text-gray-500 mb-2">
             <i class="fas fa-tag mr-2 opacity-70 w-4"></i>
@@ -637,28 +841,453 @@
             <span>Posted by ${task.createdBy || 'Anonymous'}</span>
           </div>
           
-          <div class="flex items-center text-sm text-gray-500 mb-4">
+          <div class="flex items-center text-sm text-gray-500 mb-1">
             <i class="fas fa-rupee-sign mr-2 opacity-70 w-4"></i>
             <span>${task.budget ? `₹${task.budget}` : 'Negotiable'}</span>
           </div>
           
+          ${offerInfo}
+          
           <hr class="my-4 border-gray-100">
           
-          <div class="flex justify-between items-center">
+          <div class="flex justify-between items-center mb-4">
             <div>
               <div class="text-xs text-gray-500">Accepted ${acceptedDate}</div>
-              ${task.deadline ? `<div class="text-xs text-gray-500 mt-1">Due by ${deadline}</div>` : ''}
+              ${task.deadline ? `<div class="text-xs ${deadlineClass} mt-1">${deadlineIcon}Due by ${deadline}</div>` : ''}
             </div>
-            <a href="task-detail.html?id=${task.id}" class="text-primary hover:underline text-sm">
-              View Details
-            </a>
+          </div>
+          
+          <div class="flex space-x-2">
+            ${task.status === 'In Progress' ? `
+            <button class="mark-complete-btn bg-green-500 hover:bg-green-600 text-white text-sm px-3 py-2 rounded flex-1 flex items-center justify-center" data-task-id="${task._id || task.id}">
+              <i class="fas fa-check mr-2"></i> Mark Complete
+            </button>
+            <button class="view-details-btn bg-primary hover:bg-primary-dark text-white text-sm px-3 py-2 rounded flex-1 flex items-center justify-center" data-task-id="${task._id || task.id}">
+              <i class="fas fa-info-circle mr-2"></i> Details
+            </button>
+            ` : `
+            <button class="view-details-btn bg-primary hover:bg-primary-dark text-white text-sm px-3 py-2 rounded flex-1 flex items-center justify-center" data-task-id="${task._id || task.id}">
+              <i class="fas fa-info-circle mr-2"></i> View Details
+            </button>
+            ${task.posterVerifiedCompletion ? `
+              <div class="bg-green-100 text-green-600 text-sm px-3 py-2 rounded flex-1 flex items-center justify-center">
+                <i class="fas fa-badge-check mr-2"></i> Verified Complete
+              </div>
+            ` : ''}
+            `}
           </div>
         </div>
       `;
       
+      // Add event listeners
+      setTimeout(() => {
+        // Mark complete button
+        const markCompleteBtn = card.querySelector('.mark-complete-btn');
+        if (markCompleteBtn) {
+          markCompleteBtn.addEventListener('click', function() {
+            const taskId = this.getAttribute('data-task-id');
+            markTaskAsComplete(taskId);
+          });
+        }
+        
+        // View details button
+        const viewDetailsBtn = card.querySelector('.view-details-btn');
+        if (viewDetailsBtn) {
+          viewDetailsBtn.addEventListener('click', function() {
+            const taskId = this.getAttribute('data-task-id');
+            showTaskDetails(taskId);
+          });
+        }
+      }, 100);
+      
       return card;
     }
-  </script>
-  <script src="/js/chat.js"></script>
+    
+    // Format date for display
+    function formatDate(dateString, includeTime = false) {
+      if (!dateString) return 'N/A';
+      
+      const date = new Date(dateString);
+      const options = { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      };
+      
+      if (includeTime) {
+        options.hour = '2-digit';
+        options.minute = '2-digit';
+      }
+      
+      return date.toLocaleDateString('en-IN', options);
+    }
+    
+    // Calculate days left for deadline
+    function getDaysLeft(deadlineString) {
+      if (!deadlineString) return null;
+      
+      const deadline = new Date(deadlineString);
+      const now = new Date();
+      
+      // Reset hours to compare only dates
+      deadline.setHours(0, 0, 0, 0);
+      now.setHours(0, 0, 0, 0);
+      
+      // Calculate difference in days
+      const diffTime = deadline - now;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      return diffDays;
+    }
+    
+    // Mark task as complete
+    async function markTaskAsComplete(taskId) {
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        // Confirm with the user
+        Swal.fire({
+          title: 'Confirm Completion',
+          text: "Are you sure you've completed this task? The task poster will be notified to verify completion.",
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: '#0d904f',
+          cancelButtonColor: '#6B7280',
+          confirmButtonText: 'Yes, Mark as Complete',
+          cancelButtonText: 'Cancel'
+        }).then(async (result) => {
+          if (result.isConfirmed) {
+            try {
+              // Show loading state
+              Swal.fire({
+                title: 'Updating...',
+                text: 'Sending completion request',
+                allowOutsideClick: false,
+                didOpen: () => {
+                  Swal.showLoading();
+                }
+              });
+              
+              // Submit completion request to server
+              const response = await fetch(`${API_URL}/api/tasks/${taskId}/request-completion`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+              
+              // Handle response
+              if (response.ok) {
+                const result = await response.json();
+                
+                // Show success message
+                Swal.fire({
+                  title: 'Success!',
+                  text: 'Your completion request was sent to the task poster for verification.',
+                  icon: 'success',
+                  confirmButtonColor: '#1a73e8'
+                });
+                
+                // Reload tasks to update UI
+                loadAcceptedTasks();
+              } else {
+                // If server returned an error
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to mark task as complete');
+              }
+            } catch (error) {
+              console.error('Error marking task as complete:', error);
+              Swal.fire({
+                title: 'Error',
+                text: error.message || 'Failed to mark task as complete. Please try again later.',
+                icon: 'error',
+                confirmButtonColor: '#1a73e8'
+              });
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Error in markTaskAsComplete:', error);
+        // Show error message
+        Swal.fire({
+          title: 'Error',
+          text: 'Failed to process your request. Please try again later.',
+          icon: 'error',
+          confirmButtonColor: '#1a73e8'
+        });
+      }
+    }
+    
+    // Show task details in modal
+    async function showTaskDetails(taskId) {
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        // Show loading state
+        const modal = document.getElementById('task-detail-modal');
+        const modalContent = document.getElementById('modal-content');
+        modalContent.innerHTML = `
+          <div class="text-center py-8">
+            <div class="inline-block w-12 h-12 border-4 border-gray-200 border-t-primary rounded-full animate-spin mb-4"></div>
+            <p class="text-gray-500">Loading task details...</p>
+          </div>
+        `;
+        modal.classList.remove('hidden');
+        
+        // Fetch task details
+        const response = await fetch(`${API_URL}/api/tasks/${taskId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch task details');
+        }
+        
+        const task = await response.json();
+        
+        // Determine status badge class
+        let statusClass = 'bg-green-50 text-green-600';
+        let statusIcon = 'fa-door-open';
+        
+        if (task.status === 'In Progress') {
+          statusClass = 'bg-yellow-50 text-yellow-600';
+          statusIcon = 'fa-spinner';
+        } else if (task.status === 'Completed') {
+          statusClass = 'bg-gray-50 text-gray-600';
+          statusIcon = 'fa-check-circle';
+        }
+        
+        // Format dates
+        const createdDate = formatDate(task.createdAt, true);
+        const acceptedDate = task.acceptedAt ? formatDate(task.acceptedAt, true) : 'N/A';
+        const deadline = task.deadline ? formatDate(task.deadline) : 'No deadline';
+        const completedDate = task.completedAt ? formatDate(task.completedAt, true) : 'Not completed yet';
+        
+        // Prepare deadline display
+        let deadlineDisplay = 'No deadline set';
+        let deadlineClass = 'text-gray-500';
+        
+        if (task.deadline) {
+          const daysLeft = getDaysLeft(task.deadline);
+          if (daysLeft !== null) {
+            if (daysLeft < 0) {
+              deadlineDisplay = `<span class="text-red-600 font-medium">${Math.abs(daysLeft)} days overdue</span>`;
+              deadlineClass = 'text-red-600';
+            } else if (daysLeft === 0) {
+              deadlineDisplay = `<span class="text-red-600 font-medium">Due today!</span>`;
+              deadlineClass = 'text-red-600';
+            } else if (daysLeft === 1) {
+              deadlineDisplay = `<span class="text-orange-500 font-medium">${daysLeft} day left</span>`;
+              deadlineClass = 'text-orange-500';
+            } else if (daysLeft <= 3) {
+              deadlineDisplay = `<span class="text-orange-500 font-medium">${daysLeft} days left</span>`;
+              deadlineClass = 'text-orange-500';
+            } else {
+              deadlineDisplay = `<span class="text-green-600">${daysLeft} days left</span>`;
+              deadlineClass = 'text-green-600';
+            }
+          }
+        }
+        
+        // Check if this is an offer-based task
+        const hasOffer = task.acceptedOfferId ? true : false;
+        
+        // Render task details in modal
+        modalContent.innerHTML = `
+          <div class="flex justify-between items-start mb-6">
+            <h2 class="text-xl font-bold text-gray-900">${task.title}</h2>
+            <div class="flex items-center space-x-3">
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusClass}">
+                <i class="fas ${statusIcon} mr-1.5"></i>${task.status}
+              </span>
+              <button id="close-modal-btn" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-lg"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded-lg mb-6">
+            <p class="text-gray-700 whitespace-pre-wrap">${task.description}</p>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Task Details</h3>
+              <div class="space-y-2">
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Category:</span>
+                  <span class="font-medium">${task.category || 'Not specified'}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Location:</span>
+                  <span class="font-medium">${task.location || 'Remote'}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Budget:</span>
+                  <span class="font-medium">${task.budget ? `₹${task.budget}` : 'Negotiable'}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Posted by:</span>
+                  <span class="font-medium">${task.createdBy || 'Anonymous'}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Timeline</h3>
+              <div class="space-y-2">
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Posted:</span>
+                  <span class="font-medium">${createdDate}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Accepted:</span>
+                  <span class="font-medium">${acceptedDate}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Deadline:</span>
+                  <span class="font-medium ${deadlineClass}">${deadline}</span>
+                </div>
+                ${task.status === 'Completed' ? `
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Completed:</span>
+                  <span class="font-medium text-green-600">${completedDate}</span>
+                </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+          
+          ${hasOffer ? `
+          <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6">
+            <h3 class="text-sm font-semibold text-blue-700 uppercase tracking-wider mb-2">
+              <i class="fas fa-handshake mr-1"></i> Offer Details
+            </h3>
+            <p class="text-blue-800 text-sm">
+              Your offer for this task was accepted by the poster.
+              ${task.offerAmount ? `<br><span class="font-medium">Amount: ₹${task.offerAmount}</span>` : ''}
+            </p>
+          </div>
+          ` : ''}
+          
+          <div class="border-t border-gray-200 pt-4">
+            <div class="flex gap-3 justify-end">
+              ${task.status === 'In Progress' ? `
+              <button id="modal-mark-complete-btn" data-task-id="${task._id || task.id}" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition">
+                <i class="fas fa-check mr-2"></i> Mark Task Complete
+              </button>
+              ` : ''}
+              
+              <button id="contact-poster-btn" data-task-id="${task._id || task.id}" data-poster-id="${task.userId}" class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded transition">
+                <i class="fas fa-comments mr-2"></i> Contact Poster
+              </button>
+            </div>
+          </div>
+        `;
+        
+        // Add event listeners to buttons
+        setTimeout(() => {
+          // Close modal button
+          const closeModalBtn = document.getElementById('close-modal-btn');
+          if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', closeTaskModal);
+          }
+          
+          // Modal Mark Complete button
+          const modalMarkCompleteBtn = document.getElementById('modal-mark-complete-btn');
+          if (modalMarkCompleteBtn) {
+            modalMarkCompleteBtn.addEventListener('click', function() {
+              const taskId = this.getAttribute('data-task-id');
+              closeTaskModal();
+              markTaskAsComplete(taskId);
+            });
+          }
+          
+          // Contact poster button
+          const contactPosterBtn = document.getElementById('contact-poster-btn');
+          if (contactPosterBtn) {
+            contactPosterBtn.addEventListener('click', function() {
+              const taskId = this.getAttribute('data-task-id');
+              const posterId = this.getAttribute('data-poster-id');
+              closeTaskModal();
+              startChat(taskId, posterId);
+            });
+          }
+        }, 100);
+        
+      } catch (error) {
+        console.error('Error showing task details:', error);
+        const modalContent = document.getElementById('modal-content');
+        modalContent.innerHTML = `
+          <div class="text-center py-8">
+            <i class="fas fa-exclamation-circle text-red-500 text-4xl mb-4"></i>
+            <h3 class="text-xl font-bold mb-2">Error Loading Task Details</h3>
+            <p class="text-gray-600 mb-4">${error.message || 'Failed to load task details'}</p>
+            <div class="flex justify-center gap-3">
+              <button id="retry-details-btn" class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded">
+                Try Again
+              </button>
+              <button id="close-error-modal-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded">
+                Close
+              </button>
+            </div>
+          </div>
+        `;
+        
+        // Add event listeners
+        setTimeout(() => {
+          const retryBtn = document.getElementById('retry-details-btn');
+          if (retryBtn) {
+            retryBtn.addEventListener('click', function() {
+              showTaskDetails(taskId);
+            });
+          }
+          
+          const closeErrorBtn = document.getElementById('close-error-modal-btn');
+          if (closeErrorBtn) {
+            closeErrorBtn.addEventListener('click', closeTaskModal);
+          }
+        }, 100);
+      }
+    }
+    
+    // Close task detail modal
+    function closeTaskModal() {
+      const modal = document.getElementById('task-detail-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+      }
+    }
+    
+    // Start chat with task poster
+    function startChat(taskId, posterId) {
+      if (!taskId || !posterId) {
+        console.error('Missing taskId or posterId for starting chat');
+        return;
+      }
+      
+      // We'll open the chat page with query parameters
+      const userId = localStorage.getItem('userId');
+      window.location.href = `chat.html?taskId=${taskId}&recipientId=${posterId}`;
+    }
+    
+    // Function to handle logout
+    function logout() {
+      // Clear user data from localStorage
+      localStorage.removeItem('token');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('username');
+      localStorage.removeItem('userEmail');
+      
+      // Redirect to login page
+      window.location.href = 'login.html';
+    }
+</script>
+<script src="/js/chat.js"></script>
 </body>
 </html>
