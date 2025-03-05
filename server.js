@@ -1486,16 +1486,21 @@ app.get('/api/my-accepted-tasks', authenticateToken, async (req, res) => {
 app.get('/api/my-offers', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
+    console.log('Fetching offers for user:', userId);
+    
     let offers = [];
     
     if (mongoConnected && mongoose.connection.readyState === 1) {
       // MongoDB version
       // First get all tasks created by the user
       const userTasks = await Task.find({ userId: userId }).lean();
+      console.log('Found user tasks:', userTasks.length);
+      
       const taskIds = userTasks.map(task => task._id);
       
       // Find offers for those tasks
       const rawOffers = await Offer.find({ taskId: { $in: taskIds } }).lean();
+      console.log('Found offers for user tasks:', rawOffers.length);
       
       // Get user info for each offer
       for (const offer of rawOffers) {

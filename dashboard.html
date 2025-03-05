@@ -23,6 +23,8 @@
   <script src="js/main.js"></script>
   <script src="js/user-display.js"></script>
   <script src="js/notification-handler.js"></script>
+  <!-- Chat system notifications -->
+  <script src="js/chat-notifications.js"></script>
   <!-- Configure Tailwind -->
   <script>
     tailwind.config = {
@@ -973,6 +975,9 @@
       
       // Fetch task data for dashboard
       fetchTasks();
+
+      // Fetch offers when dashboard loads
+      fetchMyOffers();
     });
     
     // Initialize the dashboard with basic information

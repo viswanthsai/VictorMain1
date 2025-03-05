@@ -836,7 +836,11 @@
         
         showNotification('Task posted successfully!', 'success');
         
-        // Redirect to tasks page after a short delay
+        // Store task success info in session storage for the popup
+        sessionStorage.setItem('taskPostSuccess', 'true');
+        sessionStorage.setItem('postedTaskId', data.id || data._id);
+        
+        // Redirect to dashboard after a short delay
         setTimeout(() => {
           window.location.href = 'dashboard.html';
         }, 1500);
