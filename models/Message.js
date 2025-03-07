@@ -12,9 +12,26 @@ const messageSchema = new Schema({
     ref: 'User',
     required: true
   },
-  text: {
+  senderName: {
+    type: String
+  },
+  content: {
     type: String,
     required: true
+  },
+  recipientId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  recipientName: {
+    type: String
+  },
+  taskId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Task'
+  },
+  taskTitle: {
+    type: String
   },
   read: {
     type: Boolean,

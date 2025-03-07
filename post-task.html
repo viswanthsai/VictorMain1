@@ -11,6 +11,20 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <!-- Config script -->
+  <script src="js/config.js"></script>
+  <script>
+    // Use production config if on GitHub Pages
+    if (window.location.hostname.includes('github.io')) {
+      document.write('<script src="js/config.prod.js"><\/script>');
+    }
+  </script>
+  <script src="js/notification.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/user-display.js"></script>
   
   <style>
     body {
@@ -51,150 +65,56 @@
       background-color: #1d4ed8;
     }
     
-    .btn-outline {
+    .animate-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    .tag-input-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 0.5rem;
       border: 1px solid #d1d5db;
-      color: #4b5563;
-    }
-    
-    .btn-outline:hover {
-      background-color: #f9fafb;
-    }
-    
-    .card {
-      background-color: white;
-      border-radius: 0.75rem;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      border: 1px solid rgba(0, 0, 0, 0.05);
-      overflow: hidden;
-    }
-    
-    #description-editor {
-      min-height: 150px;
-      max-height: 350px;
-      overflow-y: auto;
-      border-radius: 0 0 0.5rem 0.5rem;
-      padding: 1rem;
-      border: 1px solid #d1d5db;
-      border-top: none;
-    }
-    
-    #description-editor:empty:before {
-      content: attr(placeholder);
-      color: #9ca3af;
-      pointer-events: none;
-    }
-    
-    #description-editor:focus {
-      outline: none;
-      border-color: #3b82f6;
-    }
-    
-    .form-section {
-      padding: 1.5rem;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    
-    .section-title {
-      font-size: 1.125rem;
-      font-weight: 600;
-      color: #1f2937;
-      margin-bottom: 1rem;
-    }
-    
-    .input-group {
-      margin-bottom: 1.25rem;
-    }
-    
-    .input-label {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #374151;
-      margin-bottom: 0.5rem;
-    }
-    
-    .input-hint {
-      font-size: 0.75rem;
-      color: #6b7280;
-      margin-top: 0.5rem;
-    }
-    
-    /* Success modal styling */
-    #success-modal {
-      transition: opacity 0.3s ease-out;
-      opacity: 1;
-    }
-    
-    #success-modal-content {
-      transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-      transform: scale(1);
-      opacity: 1;
-    }
-    
-    #success-modal.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-    
-    #success-modal-content.hidden {
-      opacity: 0;
-      transform: scale(0.95);
-    }
-    
-    /* Animation for checkmark */
-    @keyframes checkmark {
-      0% { transform: scale(0); opacity: 0; }
-      50% { transform: scale(1.2); opacity: 1; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    
-    .checkmark-animation {
-      animation: checkmark 0.5s ease-in-out forwards;
-    }
-    
-    /* File drop area */
-    #file-drop-area {
-      border: 2px dashed #d1d5db;
       border-radius: 0.5rem;
-      padding: 1.5rem;
-      text-align: center;
+    }
+    
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      background-color: #e5e7eb;
+      color: #374151;
+      padding: 0.25rem 0.75rem;
+      border-radius: 1rem;
+      font-size: 0.875rem;
+    }
+    
+    .tag-remove {
+      margin-left: 0.5rem;
       cursor: pointer;
+      color: #6b7280;
+    }
+    
+    .tag-remove:hover {
+      color: #ef4444;
+    }
+    
+    .quick-option {
       transition: all 0.2s;
     }
     
-    #file-drop-area:hover {
-      background-color: #f9fafb;
-      border-color: #9ca3af;
-    }
-    
-    /* Tips section */
-    .tip-item {
-      display: flex;
-      align-items: flex-start;
-      margin-bottom: 0.75rem;
-    }
-    
-    .tip-icon {
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 1.25rem;
-      height: 1.25rem;
-      border-radius: 9999px;
-      background-color: #dbeafe;
-      margin-right: 0.75rem;
-    }
-    
-    .tip-text {
-      flex-grow: 1;
-      font-size: 0.875rem;
-      color: #4b5563;
+    .quick-option:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
   </style>
 </head>
 
-<body class="min-h-screen flex flex-col">
+<body class="bg-gray-50 min-h-screen flex flex-col">
   <!-- Header -->
   <header class="bg-white shadow-sm sticky top-0 left-0 right-0 z-30">
     <div class="container mx-auto px-4">
@@ -261,315 +181,593 @@
   </header>
 
   <!-- Main Content -->
-  <main class="py-10 flex-grow">
+  <main class="py-8 flex-grow">
     <div class="container mx-auto px-4 max-w-4xl">
       <!-- Post Task Page Header -->
-      <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">Post a New Task</h1>
-        <p class="text-gray-600 max-w-2xl mx-auto">Describe your task in detail to find the perfect person for the job. The more details you provide, the more relevant offers you'll receive.</p>
+      <div class="text-center mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Post a Task in Seconds</h1>
+        <p class="text-gray-600 max-w-2xl mx-auto">Tell us what you need help with and get connected quickly.</p>
       </div>
-      
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Left Column: Form -->
-        <div class="md:col-span-2">
-          <!-- Task Form -->
-          <form id="task-form" class="card overflow-hidden mb-8">
-            <!-- Task Details Section -->
-            <div class="form-section">
-              <h2 class="section-title">Task Details</h2>
-              
-              <!-- Task Title -->
-              <div class="input-group">
-                <label for="title" class="input-label">Task Title <span class="text-red-500">*</span></label>
-                <input type="text" id="title" name="title" class="form-input" placeholder="E.g., Website Development, Home Cleaning, Math Tutoring" required>
-                <p class="input-hint">Be clear and specific (max 75 characters)</p>
-              </div>
-              
-              <!-- Description -->
-              <div class="input-group">
-                <label for="description-editor" class="input-label">Description <span class="text-red-500">*</span></label>
-                <div class="rounded-lg overflow-hidden border border-gray-300">
-                  <!-- Editor Toolbar -->
-                  <div class="flex items-center gap-1 bg-gray-50 px-3 py-2 border-b border-gray-300">
-                    <button type="button" data-format="bold" class="p-1.5 rounded hover:bg-gray-100 text-gray-600">
-                      <i class="fas fa-bold"></i>
-                    </button>
-                    <button type="button" data-format="italic" class="p-1.5 rounded hover:bg-gray-100 text-gray-600">
-                      <i class="fas fa-italic"></i>
-                    </button>
-                    <button type="button" data-format="underline" class="p-1.5 rounded hover:bg-gray-100 text-gray-600">
-                      <i class="fas fa-underline"></i>
-                    </button>
-                    <span class="border-r border-gray-300 h-6 mx-2"></span>
-                    <button type="button" data-format="insertUnorderedList" class="p-1.5 rounded hover:bg-gray-100 text-gray-600">
-                      <i class="fas fa-list-ul"></i>
-                    </button>
-                    <button type="button" data-format="insertOrderedList" class="p-1.5 rounded hover:bg-gray-100 text-gray-600">
-                      <i class="fas fa-list-ol"></i>
-                    </button>
-                  </div>
-                  
-                  <!-- Editable Content Area -->
-                  <div id="description-editor" class="p-4 border border-gray-300 border-t-0 rounded-b-lg" contenteditable="true" placeholder="Describe your task in detail. What needs to be done? What skills are required?"></div>
-                </div>
-                <input type="hidden" id="description" name="description">
-                <p class="input-hint">Provide all necessary details (min 30 characters)</p>
-              </div>
-            </div>
-            
-            <!-- Task Specifications -->
-            <div class="form-section">
-              <h2 class="section-title">Task Specifications</h2>
-              
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Category -->
-                <div class="input-group">
-                  <label for="category" class="input-label">Category <span class="text-red-500">*</span></label>
-                  <select id="category" name="category" class="form-input" required>
-                    <option value="" disabled selected>Select a category</option>
-                    <option value="Home Services">Home Services</option>
-                    <option value="Delivery">Delivery & Moving</option>
-                    <option value="IT & Tech">IT & Technology</option>
-                    <option value="Tutoring">Tutoring & Education</option>
-                    <option value="Events">Events & Photography</option>
-                    <option value="Design">Design & Creative</option>
-                    <option value="Business">Business Services</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                
-                <!-- Location -->
-                <div class="input-group">
-                  <label for="location" class="input-label">Location <span class="text-red-500">*</span></label>
-                  <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <i class="fas fa-map-marker-alt text-gray-400"></i>
-                    </div>
-                    <input type="text" id="location" name="location" class="form-input pl-10" placeholder="Enter city or 'Remote'" required>
-                  </div>
-                  <p class="input-hint">Type "Remote" if location doesn't matter</p>
-                </div>
-              </div>
-              
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                <!-- Budget -->
-                <div class="input-group">
-                  <label for="budget" class="input-label">Budget (₹)</label>
-                  <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <i class="fas fa-rupee-sign text-gray-400"></i>
-                    </div>
-                    <input type="number" id="budget" name="budget" class="form-input pl-10" placeholder="Enter amount" min="0">
-                  </div>
-                  <p class="input-hint">Leave blank if price is negotiable</p>
-                </div>
-                
-                <!-- Deadline -->
-                <div class="input-group">
-                  <label for="deadline" class="input-label">Deadline</label>
-                  <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <i class="fas fa-calendar text-gray-400"></i>
-                    </div>
-                    <input type="date" id="deadline" name="deadline" class="form-input pl-10">
-                  </div>
-                  <p class="input-hint">When does this task need to be completed?</p>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Additional Options -->
-            <div class="form-section">
-              <h2 class="section-title">Additional Options</h2>
-              
-              <!-- Attachments -->
-              <div class="input-group">
-                <label class="input-label">Attachments (Optional)</label>
-                <div id="file-drop-area" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 cursor-pointer">
-                  <input type="file" id="file-input" class="hidden" multiple>
-                  <div class="text-blue-600 mb-2">
-                    <i class="fas fa-cloud-upload-alt text-3xl"></i>
-                  </div>
-                  <p class="text-gray-700 mb-1">Drag files here or click to upload</p>
-                  <p class="text-xs text-gray-500">JPG, PNG, PDF up to 5MB each</p>
-                </div>
-                <div id="file-preview-container" class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 hidden"></div>
-              </div>
-              
-              <!-- Task Privacy -->
-              <div class="flex items-start mt-5">
-                <div class="flex h-5 items-center">
-                  <input type="checkbox" id="private-task" name="private-task" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                </div>
-                <div class="ml-3">
-                  <label for="private-task" class="text-sm font-medium text-gray-700">Make this task private</label>
-                  <p class="text-xs text-gray-500">Private tasks are only visible to specific users or by invitation</p>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Form Buttons -->
-            <div class="p-6 bg-gray-50 flex flex-wrap gap-3 justify-end">
-              <button type="button" id="save-draft-button" class="btn btn-outline">
-                <i class="fas fa-save mr-2"></i>Save Draft
-              </button>
-              <button type="button" id="preview-button" class="btn btn-outline">
-                <i class="fas fa-eye mr-2"></i>Preview
-              </button>
-              <button type="submit" id="submit-button" class="btn btn-primary">
-                <i class="fas fa-paper-plane mr-2"></i>Post Task
-              </button>
-            </div>
-          </form>
-        </div>
 
-        <!-- Right Column: Tips and Help -->
-        <div class="md:col-span-1">
-          <!-- Tips Section -->
-          <div class="card p-5 mb-6">
-            <h3 class="font-semibold text-gray-800 mb-4 flex items-center">
-              <i class="fas fa-lightbulb text-yellow-500 mr-2"></i> 
-              Tips for Success
-            </h3>
-            <ul class="space-y-3">
-              <li class="flex items-start">
-                <div class="shrink-0 h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center mr-2 mt-0.5">
-                  <i class="fas fa-check text-blue-600 text-xs"></i>
+      <!-- Quick Post Section -->
+      <section id="quick-options" class="mb-8">
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+          <h2 class="text-lg font-semibold mb-4">Quick Options</h2>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <!-- Quick options -->
+            <div class="quick-option p-4 bg-blue-50 rounded-lg cursor-pointer border border-blue-100" data-category="IT & Tech" data-title="Tech Support Needed" data-desc="I need help with a technical issue.">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3">
+                  <i class="fas fa-laptop-code"></i>
                 </div>
-                <span class="text-sm text-gray-700">Be specific about what needs to be done</span>
-              </li>
-              <li class="flex items-start">
-                <div class="shrink-0 h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center mr-2 mt-0.5">
-                  <i class="fas fa-check text-blue-600 text-xs"></i>
-                </div>
-                <span class="text-sm text-gray-700">Include any qualifications needed</span>
-              </li>
-              <li class="flex items-start">
-                <div class="shrink-0 h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center mr-2 mt-0.5">
-                  <i class="fas fa-check text-blue-600 text-xs"></i>
-                </div>
-                <span class="text-sm text-gray-700">Set a realistic budget for the task</span>
-              </li>
-              <li class="flex items-start"></li>
-                <div class="shrink-0 h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center mr-2 mt-0.5">
-                  <i class="fas fa-check text-blue-600 text-xs"></i>
-                </div>
-                <span class="text-sm text-gray-700">Add photos or documents if helpful</span>
-              </li>
-            </ul>
-          </div>
-          
-          <!-- Task Examples -->
-          <div class="card p-5 mb-6">
-            <h3 class="font-semibold text-gray-800 mb-4 flex items-center">
-              <i class="fas fa-star text-blue-500 mr-2"></i> 
-              Example Tasks
-            </h3>
-            <div class="space-y-3">
-              <div class="p-3 bg-blue-50 rounded-md">
-                <p class="font-medium text-blue-700 text-sm">Website bug fixing needed</p>
-                <p class="text-gray-600 text-xs mt-1">Need someone with WordPress experience to fix menu display issues and optimize site speed</p>
-              </div>
-              <div class="p-3 bg-blue-50 rounded-md">
-                <p class="font-medium text-blue-700 text-sm">Move furniture to new apartment</p>
-                <p class="text-gray-600 text-xs mt-1">Looking for help moving a sofa and two bookshelves to my new place 2km away</p>
+                <span class="font-medium">IT & Tech</span>
               </div>
             </div>
-          </div>
-          
-          <!-- FAQ -->
-          <div class="card p-5">
-            <h3 class="font-semibold text-gray-800 mb-4 flex items-center">
-              <i class="fas fa-question-circle text-green-500 mr-2"></i> 
-              FAQ
-            </h3>
-            <div class="space-y-3">
-              <div>
-                <p class="font-medium text-gray-800 text-sm">How soon will I get responses?</p>
-                <p class="text-gray-600 text-xs mt-1">Most tasks receive their first responses within 30 minutes to 2 hours.</p>
+            
+            <div class="quick-option p-4 bg-green-50 rounded-lg cursor-pointer border border-green-100" data-category="Home Services" data-title="Home Service Required" data-desc="I need help with a task at my home.">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center mr-3">
+                  <i class="fas fa-home"></i>
+                </div>
+                <span class="font-medium">Home Services</span>
               </div>
-              <div>
-                <p class="font-medium text-gray-800 text-sm">Is my payment secure?</p>
-                <p class="text-gray-600 text-xs mt-1">Yes, payment is only released when you're satisfied with the completed task.</p>
+            </div>
+            
+            <!-- Driver Service -->
+            <div class="quick-option p-4 bg-indigo-50 rounded-lg cursor-pointer border border-indigo-100" data-category="Driver" data-title="Driver Needed" data-desc="I need someone to drive me or my vehicle for a period.">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mr-3">
+                  <i class="fas fa-car"></i>
+                </div>
+                <span class="font-medium">Driver</span>
               </div>
-              <div>
-                <p class="font-medium text-gray-800 text-sm">Can I edit my task later?</p>
-                <p class="text-gray-600 text-xs mt-1">Yes, you can edit your task details until someone starts working on it.</p>
+            </div>
+            
+            <!-- Repair Service -->
+            <div class="quick-option p-4 bg-orange-50 rounded-lg cursor-pointer border border-orange-100" data-category="Repair Services" data-title="Repair Service Needed" data-desc="I need help repairing something that's broken.">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mr-3">
+                  <i class="fas fa-tools"></i>
+                </div>
+                <span class="font-medium">Repair Service</span>
+              </div>
+            </div>
+            
+            <div class="quick-option p-4 bg-purple-50 rounded-lg cursor-pointer border border-purple-100" data-category="Tutoring" data-title="Tutoring Help Wanted" data-desc="I need academic or educational assistance.">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mr-3">
+                  <i class="fas fa-book"></i>
+                </div>
+                <span class="font-medium">Tutoring</span>
+              </div>
+            </div>
+            
+            <div class="quick-option p-4 bg-yellow-50 rounded-lg cursor-pointer border border-yellow-100" data-category="Delivery" data-title="Delivery Task" data-desc="I need something picked up and delivered.">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center mr-3">
+                  <i class="fas fa-truck"></i>
+                </div>
+                <span class="font-medium">Delivery</span>
+              </div>
+            </div>
+            
+            <!-- Child & Elder Care -->
+            <div class="quick-option p-4 bg-red-50 rounded-lg cursor-pointer border border-red-100" data-category="Care Services" data-title="Child or Elder Care Needed" data-desc="I need someone to care for a child or elderly person.">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center mr-3">
+                  <i class="fas fa-hand-holding-heart"></i>
+                </div>
+                <span class="font-medium">Care Services</span>
+              </div>
+            </div>
+            
+            <!-- Photography -->
+            <div class="quick-option p-4 bg-teal-50 rounded-lg cursor-pointer border border-teal-100" data-category="Photography" data-title="Photographer Needed" data-desc="I need someone to take professional photos.">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center mr-3">
+                  <i class="fas fa-camera"></i>
+                </div>
+                <span class="font-medium">Photography</span>
+              </div>
+            </div>
+            
+            <!-- Event Management -->
+            <div class="quick-option p-4 bg-cyan-50 rounded-lg cursor-pointer border border-cyan-100" data-category="Events" data-title="Event Management Help" data-desc="I need assistance with planning or managing an event.">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-cyan-100 text-cyan-600 flex items-center justify-center mr-3">
+                  <i class="fas fa-calendar-check"></i>
+                </div>
+                <span class="font-medium">Event Management</span>
+              </div>
+            </div>
+            
+            <div class="quick-option p-4 bg-pink-50 rounded-lg cursor-pointer border border-pink-100" data-category="Design & Creative" data-title="Design Work Needed" data-desc="I need help with a design or creative project.">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center mr-3">
+                  <i class="fas fa-paint-brush"></i>
+                </div>
+                <span class="font-medium">Design & Creative</span>
+              </div>
+            </div>
+            
+            <div class="quick-option p-4 bg-gray-50 rounded-lg cursor-pointer border border-gray-200" data-category="Other" data-title="" data-desc="">
+              <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center mr-3">
+                  <i class="fas fa-plus"></i>
+                </div>
+                <span class="font-medium">Custom Task</span>
               </div>
             </div>
           </div>
         </div>
+      </section>
+      
+      <!-- Express Task Form -->
+      <section id="express-form" class="mb-8 hidden">
+        <form id="post-task-form" class="bg-white shadow-sm rounded-xl p-6">
+          <div class="mb-4 flex justify-between items-center">
+            <h2 class="text-lg font-semibold">Express Task Form</h2>
+            <button type="button" id="back-to-quick-options" class="text-blue-600 text-sm hover:underline">
+              <i class="fas fa-arrow-left mr-1"></i> Back to options
+            </button>
+          </div>
+          
+          <!-- Title field -->
+          <div class="mb-4">
+            <label for="title" class="block text-gray-700 font-medium mb-2">What do you need help with? <span class="text-red-500">*</span></label>
+            <input type="text" id="title" name="title" class="form-input" placeholder="e.g., Fix my laptop, Help move furniture" required>
+          </div>
+          
+          <!-- Description field -->
+          <div class="mb-4">
+            <label for="description" class="block text-gray-700 font-medium mb-2">Brief description <span class="text-red-500">*</span></label>
+            <textarea id="description" name="description" rows="3" class="form-input" placeholder="Provide details about your task..." required></textarea>
+          </div>
+          
+          <!-- Contact Details (New Section) -->
+          <div class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
+            <h3 class="text-gray-700 font-medium mb-3">Your Contact Details</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Phone Number -->
+              <div>
+                <label for="phone" class="block text-gray-700 text-sm mb-1">Phone Number</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+                    <i class="fas fa-phone"></i>
+                  </span>
+                  <input type="tel" id="phone" name="phone" class="form-input pl-10" placeholder="Your contact number">
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Will only be shared with the selected helper</p>
+              </div>
+              
+              <!-- Email -->
+              <div>
+                <label for="email" class="block text-gray-700 text-sm mb-1">Email</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+                    <i class="fas fa-envelope"></i>
+                  </span>
+                  <input type="email" id="email" name="email" class="form-input pl-10" placeholder="Your email address">
+                </div>
+              </div>
+            </div>
+            
+            <!-- Preferred contact method -->
+            <div class="mt-3">
+              <label class="block text-gray-700 text-sm mb-1">Preferred contact method</label>
+              <div class="flex space-x-4 mt-1">
+                <label class="inline-flex items-center">
+                  <input type="radio" name="contact_preference" value="phone" class="text-blue-600" checked>
+                  <span class="ml-2 text-sm text-gray-700">Phone</span>
+                </label>
+                <label class="inline-flex items-center">
+                  <input type="radio" name="contact_preference" value="email" class="text-blue-600">
+                  <span class="ml-2 text-sm text-gray-700">Email</span>
+                </label>
+                <label class="inline-flex items-center">
+                  <input type="radio" name="contact_preference" value="platform" class="text-blue-600">
+                  <span class="ml-2 text-sm text-gray-700">Platform Messages</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <!-- Category dropdown -->
+            <div>
+              <label for="category" class="block text-gray-700 font-medium mb-2">Category <span class="text-red-500">*</span></label>
+              <select id="category" name="category" class="form-input" required>
+                <option value="" disabled selected>Select a category</option>
+                <option value="Home Services">Home Services</option>
+                <option value="Delivery">Delivery & Moving</option>
+                <option value="IT & Tech">IT & Technology</option>
+                <option value="Tutoring">Tutoring & Education</option>
+                <option value="Events">Events & Photography</option>
+                <option value="Driver">Driver Services</option>
+                <option value="Repair Services">Repair Services</option>
+                <option value="Care Services">Child & Elder Care</option>
+                <option value="Photography">Photography</option>
+                <option value="Design & Creative">Design & Creative</option>
+                <option value="Business">Business Services</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            
+            <!-- Location dropdown -->
+            <div>
+              <label for="location" class="block text-gray-700 font-medium mb-2">Task Location</label>
+              <select id="location" name="location" class="form-input">
+                <option value="Remote" selected>Remote</option>
+                <option value="Mumbai">Mumbai</option>
+                <option value="Delhi">Delhi</option>
+                <option value="Bangalore">Bangalore</option>
+                <option value="Chennai">Chennai</option>
+                <option value="Hyderabad">Hyderabad</option>
+                <option value="Kolkata">Kolkata</option>
+                <option value="Pune">Pune</option>
+                <option value="Ahmedabad">Ahmedabad</option>
+                <option value="Other">Other Location</option>
+              </select>
+              <p class="text-xs text-gray-500 mt-1">Default is Remote if location doesn't matter</p>
+            </div>
+          </div>
+          
+          <!-- Specific Location (New Field) -->
+          <div class="mb-4" id="specific-location-container">
+            <label for="specific-location" class="block text-gray-700 font-medium mb-2">Specific Address <span class="text-gray-500 text-sm font-normal">(Optional)</span></label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+                <i class="fas fa-map-marker-alt"></i>
+              </span>
+              <input type="text" id="specific-location" name="specific_location" class="form-input pl-10" placeholder="Enter specific address or landmark">
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Provide more details about the task location</p>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <!-- Budget field -->
+            <div>
+              <label for="budget" class="block text-gray-700 font-medium mb-2">Budget (₹)</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">₹</span>
+                <input type="number" id="budget" name="budget" class="form-input pl-7" placeholder="Optional (leave blank if negotiable)">
+              </div>
+            </div>
+            
+            <!-- Deadline field -->
+            <div>
+              <label for="deadline" class="block text-gray-700 font-medium mb-2">Deadline</label>
+              <input type="date" id="deadline" name="deadline" class="form-input" min="">
+              <p class="text-xs text-gray-500 mt-1">Optional (leave blank if flexible)</p>
+            </div>
+          </div>
+          
+          <div class="flex justify-between">
+            <div class="flex items-center">
+              <input type="checkbox" id="urgent" name="urgent" class="w-4 h-4 text-blue-600 rounded border-gray-300">
+              <label for="urgent" class="ml-2 text-gray-700">Mark as urgent</label>
+            </div>
+            
+            <button type="submit" id="post-task-button" class="btn btn-primary">
+              <i class="fas fa-paper-plane mr-2"></i>Post Task Now
+            </button>
+          </div>
+        </form>
+      </section>
+      
+      <!-- Success Message (Hidden by default) -->
+      <section id="success-message" class="hidden">
+        <div class="bg-white shadow-sm rounded-xl p-8 text-center">
+          <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-check-circle text-3xl"></i>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">Task Posted Successfully!</h2>
+          <p class="text-gray-600 mb-6">Your task has been posted and is now visible to potential helpers.</p>
+          
+          <div class="flex flex-col md:flex-row gap-3 justify-center">
+            <a href="" id="view-task-link" class="btn btn-primary">
+              <i class="fas fa-eye mr-2"></i>View Your Task
+            </a>
+            <a href="dashboard.html" class="btn border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">
+              <i class="fas fa-tachometer-alt mr-2"></i>Go to Dashboard
+            </a>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Tips Box -->
+      <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-8">
+        <h3 class="text-blue-800 font-medium flex items-center">
+          <i class="fas fa-lightbulb text-blue-600 mr-2"></i>
+          Quick Tips
+        </h3>
+        <ul class="mt-2 space-y-1 text-sm text-blue-700">
+          <li>• Being specific in your description attracts better offers</li>
+          <li>• Setting a budget helps get more relevant responses</li>
+          <li>• You'll be notified as soon as someone responds to your task</li>
+        </ul>
       </div>
     </div>
   </main>
 
-  <!-- Success Modal (fixed positioning, initially hidden) -->
-  <div id="success-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
-    <div id="success-modal-content" class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 transform scale-95 opacity-0">
-      <div class="text-center">
-        <div class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-green-100 mb-6">
-          <i class="fas fa-check-circle text-green-500 text-4xl checkmark-animation"></i>
-        </div>
-        <h2 class="text-2xl font-bold text-gray-900 mb-3">Task Posted Successfully!</h2>
-        <p class="text-gray-600 mb-6" id="success-message">Your task has been posted and is now available for offers.</p>
-        
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <a href="#" id="view-task-button" class="btn btn-primary w-full sm:w-auto">
-            <i class="fas fa-eye mr-2"></i>View Task
-          </a>
-          <a href="dashboard.html" class="btn btn-outline w-full sm:w-auto">
-            <i class="fas fa-tachometer-alt mr-2"></i>Go to Dashboard
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Preview Modal (hidden by default) -->
-  <div id="preview-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-white rounded-xl shadow-xl max-w-3xl w-full p-6 max-h-[90vh] overflow-hidden flex flex-col">
-      <div class="flex justify-between items-center pb-3 border-b border-gray-200 mb-4">
-        <h3 class="text-xl font-bold text-gray-900">Task Preview</h3>
-        <button id="close-preview" class="text-gray-400 hover:text-gray-600 focus:outline-none">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      
-      <div class="overflow-y-auto flex-grow" id="preview-content"></div>
-      
-      <div class="pt-4 mt-4 border-t border-gray-200 flex justify-end space-x-3">
-        <button id="preview-edit-button" class="btn btn-outline">
-          <i class="fas fa-pencil-alt mr-2"></i> Edit
-        </button>
-        <button id="preview-publish-button" class="btn btn-primary">
-          <i class="fas fa-paper-plane mr-2"></i> Publish Task
-        </button>
-      </div>
-    </div>
-  </div>
-
   <!-- Footer -->
-  <footer class="bg-gray-800 text-white py-8 mt-auto">
+  <footer class="bg-gray-800 text-white py-6 mt-auto">
     <div class="container mx-auto px-4">
       <div class="flex flex-col md:flex-row justify-between">
-        <div class="mb-6 md:mb-0">
-          <a href="index.html" class="text-2xl font-bold flex items-center">
-            <div class="bg-white text-blue-600 w-8 h-8 rounded flex items-center justify-center mr-2">V</div>
+        <div class="mb-4 md:mb-0">
+          <a href="index.html" class="text-xl font-bold flex items-center">
+            <div class="bg-white text-blue-600 w-6 h-6 rounded flex items-center justify-center mr-2">V</div>
             Victor
           </a>
-          <p class="mt-2 text-gray-400">Connect for Tasks, Anytime, Anywhere</p>
+          <p class="mt-1 text-sm text-gray-400">Connect for Tasks, Anytime, Anywhere</p>
         </div>
         <div class="text-center md:text-right">
-          <p class="text-gray-400">&copy; 2023 Victor. All rights reserved.</p>
+          <p class="text-sm text-gray-400">&copy; 2023 Victor. All rights reserved.</p>
         </div>
       </div>
     </div>
   </footer>
-
-  <!-- Scripts -->
-  <script src="js/post-task.js"></script>
-  <script src="js/file-handler.js"></script>
-  <script src="js/notification-handler.js"></script>
-  <script src="js/post-task-handlers.js"></script>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      checkLoginStatus();
+      initializeUserMenu();
+      initializePostTaskForm();
+      setupMobileMenu();
+      
+      // Set minimum date for deadline field to today
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('deadline').min = today;
+      
+      // Quick options click handler
+      const quickOptions = document.querySelectorAll('.quick-option');
+      quickOptions.forEach(option => {
+        option.addEventListener('click', function() {
+          const category = this.dataset.category;
+          const title = this.dataset.title;
+          const desc = this.dataset.desc;
+          
+          // Show the express form
+          document.getElementById('quick-options').classList.add('hidden');
+          document.getElementById('express-form').classList.remove('hidden');
+          
+          // Pre-fill the form if category is not "Other"
+          if (category !== "Other") {
+            document.getElementById('title').value = title;
+            document.getElementById('description').value = desc;
+            document.getElementById('category').value = category;
+          }
+          
+          // Focus on the title field (or description if title already filled)
+          if (title === "") {
+            document.getElementById('title').focus();
+          } else {
+            document.getElementById('description').focus();
+          }
+        });
+      });
+      
+      // Back button handler
+      document.getElementById('back-to-quick-options').addEventListener('click', function() {
+        document.getElementById('express-form').classList.add('hidden');
+        document.getElementById('quick-options').classList.remove('hidden');
+      });
+    });
+    
+    // Check if user is logged in
+    function checkLoginStatus() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        Swal.fire({
+          title: 'Login Required',
+          text: 'You need to log in to post a task',
+          icon: 'info',
+          showCancelButton: true,
+          confirmButtonText: 'Log In',
+          cancelButtonText: 'Sign Up',
+          confirmButtonColor: '#2563eb'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            window.location.href = 'login.html?redirect=post-task.html';
+          } else if (result.dismiss === Swal.DismissReason.cancel) {
+            window.location.href = 'signup.html?redirect=post-task.html';
+          }
+        });
+      }
+    }
+    
+    // Initialize user menu
+    function initializeUserMenu() {
+      const username = localStorage.getItem('username') || 'User';
+      const email = localStorage.getItem('userEmail') || 'user@example.com';
+      
+      // Update user info in header
+      document.getElementById('username-display').textContent = username;
+      document.getElementById('dropdown-name').textContent = username;
+      document.getElementById('dropdown-email').textContent = email;
+      document.getElementById('user-avatar').textContent = username.charAt(0).toUpperCase();
+      
+      // User dropdown functionality
+      const userMenuButton = document.getElementById('user-menu-button');
+      const userDropdown = document.getElementById('user-dropdown');
+      
+      userMenuButton.addEventListener('click', function(e) {
+        e.stopPropagation();
+        userDropdown.classList.toggle('hidden');
+      });
+      
+      document.addEventListener('click', function(e) {
+        if (!userMenuButton.contains(e.target) && !userDropdown.contains(e.target)) {
+          userDropdown.classList.add('hidden');
+        }
+      });
+      
+      // Logout functionality
+      document.getElementById('logout-button').addEventListener('click', function() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('username');
+        localStorage.removeItem('userEmail');
+        window.location.href = 'login.html';
+      });
+    }
+    
+    // Initialize post task form
+    function initializePostTaskForm() {
+      const postTaskForm = document.getElementById('post-task-form');
+      
+      // Handle location change to show/hide specific location field
+      const locationSelect = document.getElementById('location');
+      const specificLocationContainer = document.getElementById('specific-location-container');
+      
+      locationSelect.addEventListener('change', function() {
+        // Show the specific location field if not Remote
+        if (this.value === 'Remote') {
+          specificLocationContainer.classList.add('hidden');
+        } else {
+          specificLocationContainer.classList.remove('hidden');
+        }
+      });
+      
+      // Initial check for location
+      if (locationSelect.value === 'Remote') {
+        specificLocationContainer.classList.add('hidden');
+      }
+      
+      // Pre-fill email if available
+      const userEmail = localStorage.getItem('userEmail');
+      if (userEmail && document.getElementById('email')) {
+        document.getElementById('email').value = userEmail;
+      }
+      
+      postTaskForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Get form data
+        const title = document.getElementById('title').value;
+        const description = document.getElementById('description').value;
+        const category = document.getElementById('category').value;
+        const location = document.getElementById('location').value || 'Remote';
+        const specificLocation = document.getElementById('specific-location')?.value || '';
+        const phone = document.getElementById('phone')?.value || '';
+        const email = document.getElementById('email')?.value || '';
+        const contactPreference = document.querySelector('input[name="contact_preference"]:checked')?.value || 'platform';
+        const budget = document.getElementById('budget').value || null;
+        const deadline = document.getElementById('deadline').value || null;
+        const urgent = document.getElementById('urgent').checked;
+        
+        // Basic validation
+        if (!title.trim()) {
+          showError('Please provide a task title');
+          return;
+        }
+        if (!description.trim()) {
+          showError('Please provide a task description');
+          return;
+        }
+        if (!category) {
+          showError('Please select a category');
+          return;
+        }
+        
+        // Show loading state on button
+        const submitBtn = document.getElementById('post-task-button');
+        const originalBtnText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Posting...';
+        
+        try {
+          const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+          const token = localStorage.getItem('token');
+          
+          if (!token) {
+            throw new Error('Authentication required');
+          }
+          
+          // Prepare data for API
+          const taskData = {
+            title,
+            description,
+            category,
+            location,
+            specificLocation,
+            contactDetails: {
+              phone,
+              email,
+              preferredMethod: contactPreference
+            },
+            budget: budget ? parseFloat(budget) : null,
+            deadline,
+            urgent
+          };
+          
+          // Submit to API
+          const response = await fetch(`${API_URL}/api/tasks`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(taskData)
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to post task');
+          }
+          
+          const result = await response.json();
+          
+          // Show success message
+          document.getElementById('express-form').classList.add('hidden');
+          document.getElementById('success-message').classList.remove('hidden');
+          
+          // Update view task link with new task ID
+          const viewTaskLink = document.getElementById('view-task-link');
+          viewTaskLink.href = `task-detail.html?id=${result.id || result._id}`;
+          
+          // Show success notification
+          Swal.fire({
+            position: 'top-end',
+            icon: 'success',
+            title: 'Task posted successfully!',
+            showConfirmButton: false,
+            timer: 1500
+          });
+          
+        } catch (error) {
+          console.error('Error posting task:', error);
+          
+          // Show error message
+          showError(error.message || 'Something went wrong. Please try again.');
+          
+          // Restore button state
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnText;
+        }
+      });
+    }
+    
+    // Show error message
+    function showError(message) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        text: message,
+        confirmButtonColor: '#2563eb'
+      });
+    }
+    
+    // Mobile menu setup
+    function setupMobileMenu() {
+      const mobileMenuButton = document.getElementById('mobile-menu-button');
+      const mobileMenu = document.getElementById('mobile-menu');
+      
+      mobileMenuButton.addEventListener('click', function() {
+        mobileMenu.classList.toggle('hidden');
+      });
+    }
+  </script>
 </body>
 </html>

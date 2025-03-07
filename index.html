@@ -169,22 +169,32 @@
           </div>
           
           <!-- User dropdown (hidden by default, shown when logged in) -->
-          <div class="relative hidden ml-2" id="user-menu-item">
-            <button class="flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors" id="user-menu-button">
-              <i class="fas fa-user-circle text-primary mr-2"></i>
-              <span id="username-display" class="font-medium">User</span>
-              <i class="fas fa-chevron-down ml-2 text-xs text-gray-500"></i>
+          <div class="relative" id="user-menu-container">
+            <button class="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-full transition-colors" id="user-menu-button">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-400 to-blue-500 text-white flex items-center justify-center font-bold mr-2" id="user-avatar">V</div>
+              <span class="font-medium mr-1" id="username-display">User</span>
+              <i class="fas fa-chevron-down text-xs text-gray-500"></i>
             </button>
-            <div class="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-10 hidden border border-gray-100" id="user-dropdown">
-              <a class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50" href="dashboard.html">
-                <i class="fas fa-tachometer-alt w-5 mr-2 text-gray-400"></i> Dashboard
+            <div class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-1 z-10 hidden border border-gray-100" id="user-dropdown">
+              <div class="px-4 py-3 border-b border-gray-100">
+                <p class="text-sm font-medium text-gray-900" id="user-name-dropdown">User</p>
+                <p class="text-sm text-gray-500 truncate" id="user-email-dropdown">user@example.com</p>
+              </div>
+              <a href="dashboard.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-tachometer-alt w-5 text-gray-400 mr-2"></i> Dashboard
               </a>
-              <a class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50" href="profile.html">
-                <i class="fas fa-user w-5 mr-2 text-gray-400"></i> My Profile
+              <a href="profile.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-user-circle w-5 text-gray-400 mr-2"></i> My Profile
+              </a>
+              <a href="accepted-tasks.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-check-circle w-5 text-gray-400 mr-2"></i> Tasks I'm Working On
+              </a>
+              <a href="settings.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-cog w-5 text-gray-400 mr-2"></i> Settings
               </a>
               <div class="border-t border-gray-100 my-1"></div>
-              <a class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50" href="#" id="logout-button">
-                <i class="fas fa-sign-out-alt w-5 mr-2 text-gray-400"></i> Logout
+              <a href="#" id="logout-button" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
+                <i class="fas fa-sign-out-alt w-5 text-gray-400 mr-2"></i> Logout
               </a>
             </div>
           </div>
@@ -780,6 +790,7 @@
   <script src="js/notification-handler.js"></script>
   <!-- Chat system notifications -->
   <script src="js/chat-notifications.js"></script>
+  <script src="public/js/common.js"></script>
   <script>
     // Initialize AOS animation library
     document.addEventListener('DOMContentLoaded', function() {
@@ -841,6 +852,26 @@
     }
   </script>
   <script>
+    // Setup user dropdown
+    function setupUserDropdown() {
+      const userMenuButton = document.getElementById('user-menu-button');
+      const userDropdown = document.getElementById('user-dropdown');
+      
+      if (userMenuButton && userDropdown) {
+        userMenuButton.addEventListener('click', function(e) {
+          e.stopPropagation();
+          userDropdown.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+          if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
+            userDropdown.classList.add('hidden');
+          }
+        });
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
       // Get API URL from config
       const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
@@ -882,22 +913,7 @@
             }
             
             // Setup user dropdown toggle
-            const userMenuButton = document.getElementById('user-menu-button');
-            const userDropdown = document.getElementById('user-dropdown');
-            
-            if (userMenuButton && userDropdown) {
-              userMenuButton.addEventListener('click', function(e) {
-                e.stopPropagation();
-                userDropdown.classList.toggle('hidden');
-              });
-              
-              // Close dropdown when clicking outside
-              document.addEventListener('click', function(event) {
-                if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
-                  userDropdown.classList.add('hidden');
-                }
-              });
-            }
+            setupUserDropdown();
             
             // Setup logout button
             const logoutButton = document.getElementById('logout-button');
@@ -1069,6 +1085,26 @@
         return date.toLocaleDateString();
       }
     });
+    
+    // Setup user dropdown
+    function setupUserDropdown() {
+      const userMenuButton = document.getElementById('user-menu-button');
+      const userDropdown = document.getElementById('user-dropdown');
+      
+      if (userMenuButton && userDropdown) {
+        userMenuButton.addEventListener('click', function(e) {
+          e.stopPropagation();
+          userDropdown.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+          if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
+            userDropdown.classList.add('hidden');
+          }
+        });
+      }
+    }
   </script>
 
   <style>

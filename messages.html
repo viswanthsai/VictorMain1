@@ -223,7 +223,8 @@
         // Document ready
         document.addEventListener('DOMContentLoaded', function() {
             // Check if user is logged in
-            if (!Victor.auth.isLoggedIn()) {
+            const isLoggedIn = localStorage.getItem('token') !== null;
+            if (!isLoggedIn) {
                 window.location.href = 'login.html?redirect=messages.html';
                 return;
             }
@@ -259,108 +260,255 @@
 
         // Load messages list
         async function loadMessagesList() {
-            const messagesListElement = document.getElementById('messages-list');
-            const emptyStateElement = document.getElementById('empty-state');
-            const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
-            const token = localStorage.getItem('token');
-            
-            if (!token || !messagesListElement) return;
-            
-            // Show loading state
-            messagesListElement.innerHTML = `
-                <div class="py-20 text-center text-gray-500">
-                    <i class="fas fa-spinner fa-spin text-3xl"></i>
-                    <p class="mt-2">Loading conversations...</p>
-                </div>
-            `;
+            const messagesListContainer = document.getElementById('messages-list');
+            const emptyStateContainer = document.getElementById('empty-state');
+            const loadingContainer = document.getElementById('loading-container');
             
             try {
-                const response = await fetch(`${API_URL}/api/chats`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Failed to load conversations');
+                // Show loading state
+                if (messagesListContainer) {
+                    messagesListContainer.innerHTML = `
+                        <div class="py-20 text-center text-gray-500">
+                            <i class="fas fa-spinner fa-spin text-3xl"></i>
+                            <p class="mt-2">Loading conversations...</p>
+                        </div>
+                    `;
                 }
                 
-                const chats = await response.json();
+                const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+                const token = localStorage.getItem('token');
+                const userId = localStorage.getItem('userId');
                 
-                // Check if empty
-                if (chats.length === 0) {
-                    messagesListElement.classList.add('hidden');
-                    emptyStateElement.classList.remove('hidden');
+                if (!token || !userId) {
+                    console.error("User not logged in");
+                    if (messagesListContainer) messagesListContainer.classList.add('hidden');
+                    if (emptyStateContainer) emptyStateContainer.classList.remove('hidden');
                     return;
                 }
                 
-                // Hide empty state, show messages
-                messagesListElement.classList.remove('hidden');
-                emptyStateElement.classList.add('hidden');
+                // Fetch all chats for the current user
+                const chatsResponse = await fetch(`${API_URL}/api/chats`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
                 
-                // Render chats
-                messagesListElement.innerHTML = '';
-                chats.forEach(chat => {
-                    const date = new Date(chat.lastMessage.timestamp);
-                    messagesListElement.innerHTML += `
-                        <a href="chat.html?id=${chat.id}" class="block border-b border-gray-100 last:border-b-0">
-                            <div class="px-6 py-4 hover:bg-gray-50 transition-colors">
-                                <div class="flex items-start">
-                                    <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-400 to-indigo-500 text-white flex items-center justify-center font-bold text-lg mr-4">
-                                        ${chat.otherUser.name.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div class="flex-grow">
-                                        <div class="flex justify-between">
-                                            <h3 class="font-semibold text-gray-900">${chat.otherUser.name}</h3>
-                                            <span class="text-xs text-gray-500">${formatChatTime(date)}</span>
+                if (!chatsResponse.ok) {
+                    throw new Error(`Failed to fetch chats: ${chatsResponse.status}`);
+                }
+                
+                const chats = await chatsResponse.json();
+                console.log('Fetched chats:', chats);
+                
+                // Handle empty chats list
+                if (!chats || chats.length === 0) {
+                    console.log("No chats found");
+                    if (messagesListContainer) messagesListContainer.classList.add('hidden');
+                    if (emptyStateContainer) emptyStateContainer.classList.remove('hidden');
+                    return;
+                }
+                
+                // Process each chat to get the messages and other user info
+                const processedChats = [];
+                for (const chat of chats) {
+                    try {
+                        // Get messages for this chat
+                        const messagesResponse = await fetch(`${API_URL}/api/chats/${chat._id || chat.id}/messages`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        if (!messagesResponse.ok) {
+                            console.error(`Failed to fetch messages for chat ${chat._id || chat.id}`);
+                            continue;
+                        }
+                        
+                        const messages = await messagesResponse.json();
+                        console.log(`Messages for chat ${chat._id || chat.id}:`, messages);
+                        
+                        // Find the other participant in the chat
+                        let otherUserId = null;
+                        let otherUserName = 'User';
+                        
+                        // First try to get from chat participants
+                        if (chat.participants && Array.isArray(chat.participants)) {
+                            otherUserId = chat.participants.find(id => id !== userId);
+                        }
+                        
+                        // If no messages or other user not found yet, skip this chat
+                        if (!messages || messages.length === 0) {
+                            continue;
+                        }
+                        
+                        // Try to get from messages if not found from participants
+                        if (!otherUserId) {
+                            // Look through messages to find the other user
+                            for (const msg of messages) {
+                                if (msg.senderId === userId && msg.recipientId) {
+                                    otherUserId = msg.recipientId;
+                                    otherUserName = msg.recipientName || 'User';
+                                    break;
+                                } else if (msg.recipientId === userId && msg.senderId) {
+                                    otherUserId = msg.senderId;
+                                    otherUserName = msg.senderName || 'User';
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // Get task details
+                        let taskTitle = 'Task';
+                        const taskId = messages[0].taskId;
+                        
+                        if (messages[0].taskTitle) {
+                            taskTitle = messages[0].taskTitle;
+                        } else if (taskId) {
+                            try {
+                                const taskResponse = await fetch(`${API_URL}/api/tasks/${taskId}`, {
+                                    headers: { 'Authorization': `Bearer ${token}` }
+                                });
+                                
+                                if (taskResponse.ok) {
+                                    const taskData = await taskResponse.json();
+                                    taskTitle = taskData.title || 'Task';
+                                }
+                            } catch (error) {
+                                console.error('Error fetching task details:', error);
+                            }
+                        }
+                        
+                        // Get latest message
+                        const latestMessage = messages[messages.length - 1];
+                        
+                        // Add processed chat to array
+                        processedChats.push({
+                            id: chat._id || chat.id,
+                            otherUser: {
+                                id: otherUserId,
+                                name: otherUserName
+                            },
+                            taskId: taskId,
+                            taskTitle: taskTitle,
+                            lastMessage: {
+                                text: latestMessage.content || "No message content",
+                                timestamp: latestMessage.createdAt || chat.updatedAt || chat.createdAt,
+                                senderId: latestMessage.senderId,
+                                read: latestMessage.read || false
+                            }
+                        });
+                    } catch (error) {
+                        console.error(`Error processing chat ${chat._id || chat.id}:`, error);
+                    }
+                }
+                
+                // Sort chats by latest message time
+                processedChats.sort((a, b) => {
+                    const timeA = new Date(a.lastMessage.timestamp);
+                    const timeB = new Date(b.lastMessage.timestamp);
+                    return timeB - timeA;
+                });
+                
+                // Show the chats
+                if (processedChats.length > 0) {
+                    if (messagesListContainer) {
+                        messagesListContainer.classList.remove('hidden');
+                        messagesListContainer.innerHTML = '';
+                        
+                        processedChats.forEach(chat => {
+                            const date = new Date(chat.lastMessage.timestamp);
+                            const isUnread = chat.lastMessage.senderId !== userId && !chat.lastMessage.read;
+                            
+                            const chatElement = document.createElement('a');
+                            chatElement.href = `chat.html?id=${chat.id}`;
+                            chatElement.className = `block border-b border-gray-100 last:border-b-0 ${isUnread ? 'bg-blue-50' : ''}`;
+                            
+                            chatElement.innerHTML = `
+                                <div class="px-6 py-4 hover:bg-gray-50 transition-colors">
+                                    <div class="flex items-start">
+                                        <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-400 to-indigo-500 text-white flex items-center justify-center font-bold text-lg mr-4">
+                                            ${chat.otherUser.name.charAt(0).toUpperCase()}
                                         </div>
-                                        <p class="text-sm text-gray-600 truncate mt-1">${chat.lastMessage.text}</p>
-                                        <div class="flex justify-between items-center mt-2">
-                                            <span class="text-xs text-gray-500">Task: ${chat.taskTitle}</span>
-                                            ${chat.unreadCount > 0 ? `
-                                                <span class="bg-primary text-white text-xs rounded-full px-2 py-0.5">
-                                                    ${chat.unreadCount} new
-                                                </span>
-                                            ` : ''}
+                                        <div class="flex-grow">
+                                            <div class="flex justify-between">
+                                                <h3 class="font-semibold text-gray-900">${chat.otherUser.name}</h3>
+                                                <span class="text-xs text-gray-500">${formatChatTime(date)}</span>
+                                            </div>
+                                            <p class="text-sm ${isUnread ? 'font-semibold text-gray-800' : 'text-gray-600'} truncate mt-1">
+                                                ${chat.lastMessage.text}
+                                            </p>
+                                            <div class="flex justify-between items-center mt-2">
+                                                <span class="text-xs text-gray-500">Task: ${chat.taskTitle}</span>
+                                                ${isUnread ? `
+                                                    <span class="bg-primary text-white text-xs rounded-full px-2 py-0.5">
+                                                        New
+                                                    </span>
+                                                ` : ''}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </a>
-                    `;
-                });
-                
+                            `;
+                            
+                            messagesListContainer.appendChild(chatElement);
+                        });
+                    }
+                    
+                    if (emptyStateContainer) {
+                        emptyStateContainer.classList.add('hidden');
+                    }
+                } else {
+                    if (messagesListContainer) {
+                        messagesListContainer.classList.add('hidden');
+                    }
+                    
+                    if (emptyStateContainer) {
+                        emptyStateContainer.classList.remove('hidden');
+                    }
+                }
             } catch (error) {
-                console.error('Error loading conversations:', error);
-                messagesListElement.innerHTML = `
-                    <div class="py-12 text-center">
-                        <div class="text-red-500 mb-3"><i class="fas fa-exclamation-circle text-xl"></i></div>
-                        <p class="text-gray-700">Failed to load conversations</p>
-                        <button id="retry-button" class="mt-4 text-primary hover:underline">Try again</button>
-                    </div>
-                `;
+                console.error('Error loading messages list:', error);
                 
-                // Add retry functionality
-                const retryButton = document.getElementById('retry-button');
-                if (retryButton) {
-                    retryButton.addEventListener('click', () => loadMessagesList());
+                if (messagesListContainer) {
+                    messagesListContainer.innerHTML = `
+                        <div class="py-12 text-center">
+                            <div class="text-red-500 mb-3"><i class="fas fa-exclamation-circle text-xl"></i></div>
+                            <p class="text-gray-700">Failed to load conversations</p>
+                            <button id="retry-button" class="mt-4 text-primary hover:underline">Try again</button>
+                        </div>
+                    `;
+                    
+                    const retryButton = document.getElementById('retry-button');
+                    if (retryButton) {
+                        retryButton.addEventListener('click', () => loadMessagesList());
+                    }
                 }
             }
         }
         
-        // Format chat timestamp
-        function formatChatTime(date) {
+        // Helper function to format chat time
+        function formatChatTime(timestamp) {
             const now = new Date();
-            const diffMs = now - date;
-            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const messageDate = new Date(timestamp);
             
-            if (diffDays === 0) {
-                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            } else if (diffDays === 1) {
-                return 'Yesterday';
-            } else if (diffDays < 7) {
-                return date.toLocaleDateString([], { weekday: 'short' });
-            } else {
-                return date.toLocaleDateString();
+            // Same day
+            if (messageDate.toDateString() === now.toDateString()) {
+                return messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             }
+            
+            // Yesterday
+            const yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+            if (messageDate.toDateString() === yesterday.toDateString()) {
+                return 'Yesterday';
+            }
+            
+            // Within a week
+            const oneWeek = 7 * 24 * 60 * 60 * 1000;
+            if ((now - messageDate) < oneWeek) {
+                const options = { weekday: 'short' };
+                return messageDate.toLocaleDateString(undefined, options);
+            }
+            
+            // Older
+            const options = { month: 'short', day: 'numeric' };
+            return messageDate.toLocaleDateString(undefined, options);
         }
     </script>
 </body>

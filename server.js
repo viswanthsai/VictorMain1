@@ -630,7 +630,7 @@ app.get('/api/tasks', async (req, res) => {
 // Create Task
 app.post('/api/tasks', authenticateToken, async (req, res) => {
   try {
-    const { title, description, category, location, budget, deadline } = req.body;
+    const { title, description, category, location, budget, deadline, contactDetails, specificLocation, urgent } = req.body;
     
     // Validation
     if (!title || !description) {
@@ -646,17 +646,20 @@ app.post('/api/tasks', authenticateToken, async (req, res) => {
         return res.status(404).json({ message: 'User not found' });
       }
       
-      // Create new task
+      // Create new task - Add contactDetails field here
       const task = new Task({
         title,
         description,
         category: category || 'Other',
         location: location || 'Remote',
+        specificLocation: specificLocation || null,
+        contactDetails: contactDetails || null, // Add this line
         budget: budget || null,
         deadline: deadline || null,
         userId: user._id,
         createdBy: user.fullname,
-        status: 'Open'
+        status: 'Open',
+        urgent: urgent || false // Add this line too for the urgent flag
       });
       
       await task.save();
@@ -674,8 +677,11 @@ app.post('/api/tasks', authenticateToken, async (req, res) => {
         description,
         category: category || 'Other',
         location: location || 'Remote',
+        specificLocation: specificLocation || null,
+        contactDetails: contactDetails || null, // Add this line
         budget: budget ? parseInt(budget) : null,
         deadline: deadline || null,
+        urgent: urgent || false, // Add this line too
         userId: req.user.id,
         status: 'Open',
         createdAt: new Date().toISOString(),
@@ -1764,98 +1770,72 @@ app.post('/api/notifications/:id/read', authenticateToken, async (req, res) => {
 // Chat Routes
 // -----------
 
-// Create a new chat between users
+// Create or get a chat between two users for a specific task
 app.post('/api/chats/create', authenticateToken, async (req, res) => {
   try {
-    const { taskId, offerId, recipientId } = req.body;
-    const senderId = req.user.id;
+    const { taskId, recipientId } = req.body;
+    const userId = req.user.id;
+    
+    if (!taskId || !recipientId) {
+      return res.status(400).json({ message: 'taskId and recipientId are required' });
+    }
     
     if (mongoConnected) {
-      // MongoDB version
-      // Check if task exists
-      const task = await Task.findById(taskId);
-      if (!task) {
-        return res.status(404).json({ message: 'Task not found' });
-      }
-      
-      // Verify that one participant is the task owner
-      if (task.userId.toString() !== senderId && task.userId.toString() !== recipientId) {
-        return res.status(403).json({ message: 'One participant must be the task owner' });
-      }
-      
-      // Check if chat already exists for these participants and this task
+      // Check if chat already exists
       let chat = await Chat.findOne({
-        participants: { $all: [senderId, recipientId] },
-        taskId
+        taskId,
+        participants: { $all: [userId, recipientId] }
       });
       
       if (chat) {
-        return res.status(200).json({ 
-          chatId: chat._id,
-          message: 'Chat already exists' 
-        });
+        console.log('Found existing chat:', chat);
+        return res.status(200).json(chat);
       }
       
-      // Create new chat
-      chat = new Chat({
-        participants: [senderId, recipientId],
+      // If not, create new chat
+      const newChat = new Chat({
         taskId,
-        offerId: offerId || null
+        participants: [userId, recipientId],
+        createdAt: new Date(),
+        updatedAt: new Date()
       });
       
-      await chat.save();
-      
-      res.status(201).json({ 
-        chatId: chat._id,
-        message: 'Chat created successfully' 
-      });
+      await newChat.save();
+      console.log('Created new chat:', newChat);
+      res.status(201).json(newChat);
     } else {
       // File-based version
-      // Since we don't have a chats.json file setup yet, let's prepare the structure
-      const CHATS_FILE = path.join(DATA_DIR, 'chats.json');
-      const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
-      
-      await createEmptyFileIfNotExists(CHATS_FILE);
-      await createEmptyFileIfNotExists(MESSAGES_FILE);
-      
       const chats = await readData(CHATS_FILE);
       
-      // Check if chat already exists for these participants and this task
-      let chat = chats.find(c => 
-        c.participants.includes(senderId) && 
-        c.participants.includes(recipientId) && 
-        c.taskId === taskId
+      // Check if chat already exists
+      const existingChat = chats.find(c => 
+        c.taskId == taskId && 
+        c.participants && 
+        c.participants.includes(userId) && 
+        c.participants.includes(recipientId)
       );
       
-      if (chat) {
-        return res.status(200).json({ 
-          chatId: chat.id,
-          message: 'Chat already exists' 
-        });
+      if (existingChat) {
+        return res.status(200).json(existingChat);
       }
       
       // Create new chat
       const newChat = {
-        id: uuidv4(),
-        participants: [senderId, recipientId],
+        id: chats.length > 0 ? Math.max(...chats.map(c => c.id)) + 1 : 1,
         taskId,
-        offerId: offerId || null,
-        createdAt: new Date().toISOString()
+        participants: [userId, recipientId],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
       
       chats.push(newChat);
-      
-      // Save to file
       await writeData(CHATS_FILE, chats);
       
-      res.status(201).json({ 
-        chatId: newChat.id,
-        message: 'Chat created successfully' 
-      });
+      res.status(201).json(newChat);
     }
-  } catch (error) {
-    console.error('Error creating chat:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+  } catch (err) {
+    console.error('Error creating chat:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
@@ -1939,71 +1919,287 @@ app.get('/api/chats/:chatId/messages', authenticateToken, async (req, res) => {
 app.post('/api/chats/:chatId/messages', authenticateToken, async (req, res) => {
   try {
     const { chatId } = req.params;
-    const { content } = req.body;
+    const { content, taskId, taskTitle, recipientId, recipientName } = req.body;
     const senderId = req.user.id;
     
-    if (!content) {
-      return res.status(400).json({ message: 'Message content is required' });
+    // Validate required fields
+    if (!content || !chatId) {
+      return res.status(400).json({ message: 'Content and chatId are required' });
     }
+    
+    // Get sender name
+    let senderName = 'User';
+    if (mongoConnected) {
+      try {
+        const sender = await User.findById(senderId);
+        if (sender) {
+          senderName = sender.fullname || sender.username || 'User';
+        }
+      } catch (error) {
+        console.error('Error finding sender:', error);
+        // Continue with default name
+      }
+    }
+    
+    // Create and save message with all required fields
+    if (mongoConnected) {
+      // Create new message
+      const message = new Message({
+        chatId,
+        senderId,
+        senderName,
+        content,
+        taskId,
+        taskTitle,
+        recipientId,
+        recipientName,
+        read: false,
+        createdAt: new Date()
+      });
+      
+      const savedMessage = await message.save();
+      
+      // Update chat with last message info
+      await Chat.findByIdAndUpdate(
+        chatId, 
+        { 
+          lastMessage: {
+            content,
+            senderId,
+            timestamp: new Date()
+          },
+          updatedAt: new Date()
+        }
+      );
+      
+      // Return the saved message with all fields
+      res.status(201).json(savedMessage);
+    } else {
+      // File-based storage
+      const messages = await readData(MESSAGES_FILE);
+      const newMessage = {
+        id: messages.length > 0 ? Math.max(...messages.map(m => m.id)) + 1 : 1,
+        chatId,
+        senderId,
+        senderName,
+        content,
+        taskId,
+        taskTitle,
+        recipientId,
+        recipientName,
+        read: false,
+        createdAt: new Date().toISOString()
+      };
+      
+      messages.push(newMessage);
+      await writeData(MESSAGES_FILE, messages);
+      
+      // Update chat in file
+      const chats = await readData(CHATS_FILE);
+      const chatIndex = chats.findIndex(c => c.id.toString() === chatId.toString());
+      if (chatIndex !== -1) {
+        chats[chatIndex].lastMessage = {
+          content,
+          senderId,
+          timestamp: new Date().toISOString()
+        };
+        chats[chatIndex].updatedAt = new Date().toISOString();
+        await writeData(CHATS_FILE, chats);
+      }
+      
+      res.status(201).json(newMessage);
+    }
+  } catch (err) {
+    console.error('Error creating message:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
+// Add these endpoints after the existing Chat routes
+
+// Get a specific chat by ID
+app.get('/api/chats/:chatId', authenticateToken, async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const userId = req.user.id;
     
     if (mongoConnected) {
       // MongoDB version
-      const chat = await Chat.findById(chatId);
+      const chat = await Chat.findById(chatId).lean();
+      
       if (!chat) {
         return res.status(404).json({ message: 'Chat not found' });
       }
       
-      if (!chat.participants.includes(senderId)) {
-        return res.status(403).json({ message: 'Not authorized to send messages in this chat' });
+      if (!chat.participants.includes(userId)) {
+        return res.status(403).json({ message: 'Not authorized to access this chat' });
       }
       
-      const message = new Message({
-        chatId,
-        senderId,
-        content,
-        createdAt: new Date()
+      // Get other user details
+      const otherUserId = chat.participants.find(id => id.toString() !== userId);
+      let otherUser = { id: otherUserId, name: 'User' };
+      
+      if (otherUserId) {
+        const user = await User.findById(otherUserId).lean();
+        if (user) {
+          otherUser = {
+            id: otherUserId,
+            name: user.fullname || user.username || 'User'
+          };
+        }
+      }
+      
+      // Get task details if exists
+      let taskTitle = 'Task';
+      if (chat.taskId) {
+        const task = await Task.findById(chat.taskId).lean();
+        if (task) {
+          taskTitle = task.title;
+        }
+      }
+      
+      // Return formatted chat object
+      res.json({
+        id: chat._id,
+        participants: chat.participants,
+        taskId: chat.taskId,
+        taskTitle,
+        otherUser,
+        createdAt: chat.createdAt,
+        updatedAt: chat.updatedAt
       });
-      
-      await message.save();
-      
-      res.status(201).json(message);
     } else {
       // File-based version
-      const CHATS_FILE = path.join(DATA_DIR, 'chats.json');
-      const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
-      
-      await createEmptyFileIfNotExists(CHATS_FILE);
-      await createEmptyFileIfNotExists(MESSAGES_FILE);
-      
-      const chats = await readData(CHATS_FILE);
+      const chats = await readData(path.join(DATA_DIR, 'chats.json'));
       const chat = chats.find(c => c.id === chatId);
       
       if (!chat) {
         return res.status(404).json({ message: 'Chat not found' });
       }
       
-      if (!chat.participants.includes(senderId)) {
-        return res.status(403).json({ message: 'Not authorized to send messages in this chat' });
+      if (!chat.participants.includes(userId)) {
+        return res.status(403).json({ message: 'Not authorized to access this chat' });
       }
+      
+      // Get other user details
+      const otherUserId = chat.participants.find(id => id !== userId);
+      let otherUser = { id: otherUserId, name: 'User' };
+      
+      if (otherUserId) {
+        const users = await readData(USERS_FILE);
+        const user = users.find(u => u.id === otherUserId);
+        if (user) {
+          otherUser = {
+            id: otherUserId,
+            name: user.fullname || user.username || 'User'
+          };
+        }
+      }
+      
+      // Get task details if exists
+      let taskTitle = 'Task';
+      if (chat.taskId) {
+        const tasks = await readData(TASKS_FILE);
+        const task = tasks.find(t => t.id == chat.taskId);
+        if (task) {
+          taskTitle = task.title;
+        }
+      }
+      
+      // Return formatted chat object
+      res.json({
+        id: chat.id,
+        participants: chat.participants,
+        taskId: chat.taskId,
+        taskTitle,
+        otherUser,
+        createdAt: chat.createdAt,
+        updatedAt: chat.updatedAt || chat.createdAt
+      });
+    }
+  } catch (error) {
+    console.error('Error getting chat:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Mark a chat as read
+app.post('/api/chats/:chatId/read', authenticateToken, async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const userId = req.user.id;
+    
+    if (mongoConnected) {
+      // MongoDB version
+      // Find all unread messages in this chat sent by others
+      await Message.updateMany(
+        { 
+          chatId, 
+          senderId: { $ne: userId }, 
+          read: false 
+        },
+        { 
+          read: true 
+        }
+      );
+      
+      res.json({ message: 'Messages marked as read' });
+    } else {
+      // File-based version
+      const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
+      await createEmptyFileIfNotExists(MESSAGES_FILE);
+      
+      const messages = await readData(MESSAGES_FILE);
+      let updated = false;
+      
+      // Mark all unread messages as read
+      for (let i = 0; i < messages.length; i++) {
+        if (messages[i].chatId === chatId && messages[i].senderId !== userId && !messages[i].read) {
+          messages[i].read = true;
+          updated = true;
+        }
+      }
+      
+      if (updated) {
+        await writeData(MESSAGES_FILE, messages);
+      }
+      
+      res.json({ message: 'Messages marked as read' });
+    }
+  } catch (error) {
+    console.error('Error marking chat as read:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get unread message count
+app.get('/api/chats/unread', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    if (mongoConnected) {
+      // MongoDB version
+      // Count unread messages across all chats
+      const unreadCount = await Message.countDocuments({
+        recipientId: userId,
+        read: false
+      });
+      
+      res.json({ unreadCount });
+    } else {
+      // File-based version
+      const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
+      await createEmptyFileIfNotExists(MESSAGES_FILE);
       
       const messages = await readData(MESSAGES_FILE);
       
-      const newMessage = {
-        id: uuidv4(),
-        chatId,
-        senderId,
-        content,
-        createdAt: new Date().toISOString()
-      };
+      // Count unread messages where recipientId is current user
+      const unreadCount = messages.filter(m => m.recipientId === userId && !m.read).length;
       
-      messages.push(newMessage);
-      
-      await writeData(MESSAGES_FILE, messages);
-      
-      res.status(201).json(newMessage);
+      res.json({ unreadCount });
     }
   } catch (error) {
-    console.error('Error sending message:', error);
+    console.error('Error getting unread count:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

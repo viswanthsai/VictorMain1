@@ -1,329 +1,843 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat | Victor</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Config script -->
-    <script src="js/config.js"></script>
-    <script src="js/notification.js"></script>
-    <script src="js/user-display.js"></script>
-    <!-- Chat specific styles -->
-    <link rel="stylesheet" href="css/chat.css">
-    <!-- Configure Tailwind -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            DEFAULT: '#1a73e8',
-                            dark: '#1557b0',
-                            light: '#e8f0fe',
-                        },
-                        secondary: '#5f6368',
-                        success: '#0d904f',
-                        warning: '#f9ab00',
-                        danger: '#d93025',
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        /* Custom scrollbar for messages */
-        #messages-container::-webkit-scrollbar {
-            width: 6px;
-        }
-        #messages-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 8px;
-        }
-        #messages-container::-webkit-scrollbar-thumb {
-            background: #ccc;
-            border-radius: 8px;
-        }
-        #messages-container::-webkit-scrollbar-thumb:hover {
-            background: #bbb;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat - Victor</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Config script -->
+  <script src="js/config.js"></script>
+  <script src="js/notification.js"></script>
+  <script src="js/user-display.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/chat-page.js"></script>
+  
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .message-bubble {
+      max-width: 70%;
+      word-wrap: break-word;
+    }
+    
+    .message-bubble.sender {
+      background-color: #e8f0fe;
+      border-radius: 18px 18px 4px 18px;
+    }
+    
+    .message-bubble.receiver {
+      background-color: #f2f2f2;
+      border-radius: 18px 18px 18px 4px;
+    }
+    
+    .chat-list-item.active {
+      background-color: #f0f7ff;
+      border-left: 3px solid #1a73e8;
+    }
+    
+    /* Typing indicator animation */
+    .typing-indicator span {
+      animation: blink 1.4s infinite;
+      animation-fill-mode: both;
+    }
+    
+    .typing-indicator span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+    
+    .typing-indicator span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+    
+    @keyframes blink {
+      0% {
+        opacity: .2;
+      }
+      20% {
+        opacity: 1;
+      }
+      100% {
+        opacity: .2;
+      }
+    }
+    
+    .chat-container {
+      height: calc(100vh - 180px);
+    }
+    
+    @media (max-width: 768px) {
+      .chat-container {
+        height: calc(100vh - 140px);
+      }
+    }
+  </style>
 </head>
-<body class="bg-gray-50 flex flex-col min-h-screen font-sans">
-    <!-- Header -->
-    <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-50">
-        <div class="container mx-auto px-4">
-            <div class="flex items-center justify-between py-3">
-                <a class="text-primary font-bold text-2xl flex items-center" href="index.html">
-                    <span class="bg-gradient-to-r from-primary to-blue-600 text-white p-1.5 rounded mr-1.5 flex items-center justify-center w-8 h-8">V</span>ictor
-                </a>
-                
-                <!-- Search bar - desktop -->
-                <div class="hidden md:flex flex-grow max-w-xl mx-8">
-                    <div class="relative w-full">
-                        <input type="text" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fas fa-search text-gray-400"></i>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Mobile menu button -->
-                <button class="md:hidden text-gray-600 focus:outline-none" id="mobile-menu-button">
-                    <i class="fas fa-bars text-xl"></i>
-                </button>
-                
-                <!-- Desktop nav menu -->
-                <nav class="hidden md:flex items-center space-x-1">
-                    <a href="index.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Home</a>
-                    <a href="tasks.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Browse Tasks</a>
-                    <a href="post-task.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Post a Task</a>
-                    
-                    <!-- Notifications dropdown -->
-                    <div class="relative">
-                        <button class="p-2 text-gray-600 hover:text-primary rounded-full hover:bg-gray-100 relative" id="notifications-button">
-                            <i class="fas fa-bell"></i>
-                            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full" id="notifications-count">0</span>
-                        </button>
-                        <div class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg py-1 z-10 hidden border border-gray-100" id="notifications-dropdown">
-                            <div class="px-4 py-3 border-b border-gray-100">
-                                <h3 class="font-semibold text-gray-900">Notifications</h3>
-                            </div>
-                            <div class="max-h-64 overflow-y-auto" id="notifications-container">
-                                <div class="text-center py-4 text-gray-500">No notifications yet</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Messages dropdown -->
-                    <div class="relative">
-                        <a href="messages.html" class="p-2 text-primary hover:text-primary-dark rounded-full hover:bg-gray-100 relative">
-                            <i class="fas fa-envelope"></i>
-                            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full" id="chat-count" style="display: none;">0</span>
-                        </a>
-                    </div>
-                    
-                    <!-- User dropdown -->
-                    <div class="relative" id="user-menu-container">
-                        <button class="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-full transition-colors" id="user-menu-button">
-                            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-400 to-blue-500 text-white flex items-center justify-center font-bold mr-2" id="user-avatar">V</div>
-                            <span class="font-medium mr-1" id="username-display">User</span>
-                            <i class="fas fa-chevron-down text-xs text-gray-500"></i>
-                        </button>
-                        <div class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-1 z-10 hidden border border-gray-100" id="user-dropdown">
-                            <div class="px-4 py-3 border-b border-gray-100">
-                                <p class="text-sm font-medium text-gray-900" id="user-name-dropdown">User</p>
-                                <p class="text-sm text-gray-500 truncate" id="user-email-dropdown">user@example.com</p>
-                            </div>
-                            <a href="dashboard.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
-                                <i class="fas fa-tachometer-alt w-5 text-gray-400 mr-2"></i> Dashboard
-                            </a>
-                            <a href="profile.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
-                                <i class="fas fa-user-circle w-5 text-gray-400 mr-2"></i> My Profile
-                            </a>
-                            <a href="accepted-tasks.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
-                                <i class="fas fa-check-circle w-5 text-gray-400 mr-2"></i> Tasks I'm Working On
-                            </a>
-                            <div class="border-t border-gray-100 my-1"></div>
-                            <a href="#" id="logout-button" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
-                                <i class="fas fa-sign-out-alt w-5 text-gray-400 mr-2"></i> Logout
-                            </a>
-                        </div>
-                    </div>
-                    
-                    <!-- Login/Signup options (visible when logged out) -->
-                    <div class="flex items-center space-x-2" id="auth-buttons">
-                        <a class="px-4 py-2 text-gray-700 font-medium hover:text-primary transition-colors" href="login.html" id="login-menu-item">
-                            Log In
-                        </a>
-                        <a class="px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors" href="signup.html" id="signup-menu-item">
-                            Sign Up
-                        </a>
-                    </div>
-                </nav>
+<body class="bg-gray-50">
+  <!-- Header -->
+  <header class="bg-white shadow-sm sticky top-0 z-10">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between py-3">
+        <a href="index.html" class="flex items-center">
+          <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold">V</div>
+          <span class="ml-2 font-bold text-xl">Victor</span>
+        </a>
+        
+        <div class="flex items-center space-x-4">
+          <a href="dashboard.html" class="text-gray-600 hover:text-blue-600">
+            <i class="fas fa-home"></i>
+          </a>
+          <a href="tasks.html" class="text-gray-600 hover:text-blue-600">
+            <i class="fas fa-tasks"></i>
+          </a>
+          <div class="relative" id="user-menu">
+            <button class="flex items-center" id="user-menu-button">
+              <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-medium" id="user-avatar">U</div>
+              <i class="fas fa-chevron-down ml-2 text-gray-500 text-xs"></i>
+            </button>
+            
+            <div class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20 hidden" id="user-dropdown">
+              <a href="profile.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+              <a href="dashboard.html" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dashboard</a>
+              <div class="border-t border-gray-100 my-1"></div>
+              <button id="logout-button" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                Sign out
+              </button>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container mx-auto px-4 py-6">
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div class="flex flex-col md:flex-row h-full">
+        <!-- Chat List (Left Side) -->
+        <div class="w-full md:w-1/3 border-r border-gray-200">
+          <div class="p-4 border-b border-gray-200">
+            <h2 class="font-semibold text-lg">Messages</h2>
+          </div>
+          
+          <!-- Search input -->
+          <div class="p-4 border-b border-gray-200">
+            <div class="relative">
+              <input type="text" placeholder="Search messages..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-search text-gray-400"></i>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Chat list -->
+          <div id="chat-list" class="overflow-y-auto h-96 md:h-[calc(100vh-180px)]">
+            <!-- Chat items will be dynamically inserted here -->
+            <div id="no-chats-message" class="text-center py-8 text-gray-500">
+              <i class="fas fa-comments text-gray-300 text-4xl mb-2"></i>
+              <p>No conversations yet</p>
+            </div>
+          </div>
         </div>
         
-        <!-- Mobile menu (hidden by default) -->
-        <div class="md:hidden bg-white border-t border-gray-100 px-4 py-2 hidden" id="mobile-menu">
-            <!-- Mobile search -->
-            <div class="relative mb-4">
-                <input type="text" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i class="fas fa-search text-gray-400"></i>
-                </div>
+        <!-- Chat Window (Right Side) -->
+        <div class="w-full md:w-2/3 flex flex-col">
+          <!-- Chat header -->
+          <div id="chat-header" class="p-4 border-b border-gray-200 flex items-center justify-between">
+            <div class="flex items-center">
+              <div id="chat-avatar" class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 font-medium">
+                <i class="fas fa-user"></i>
+              </div>
+              <div class="ml-3">
+                <h3 id="chat-recipient-name" class="font-medium">Select a conversation</h3>
+                <p id="chat-task-title" class="text-xs text-gray-500"></p>
+              </div>
             </div>
             
-            <div class="flex flex-col space-y-1">
-                <a href="index.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Home</a>
-                <a href="tasks.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Browse Tasks</a>
-                <a href="post-task.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Post a Task</a>
-                <a href="messages.html" class="px-2 py-2 text-primary bg-primary-light rounded-md">Messages</a>
-                <div class="border-t border-gray-100 my-1 pt-1" id="mobile-auth-links">
-                    <a href="login.html" class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md">Log In</a>
-                    <a href="signup.html" class="px-2 py-2 text-primary font-medium">Create an Account</a>
-                </div>
-                <div id="mobile-user-links" class="hidden">
-                    <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="dashboard.html">
-                        <i class="fas fa-tachometer-alt w-5 mr-2 text-gray-400"></i> Dashboard
-                    </a>
-                    <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="profile.html">
-                        <i class="fas fa-user w-5 mr-2 text-gray-400"></i> My Profile
-                    </a>
-                    <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="accepted-tasks.html">
-                        <i class="fas fa-check-circle w-5 mr-2 text-gray-400"></i> Tasks I'm Working On
-                    </a>
-                    <div class="border-t border-gray-100 my-1"></div>
-                    <a class="px-2 py-2 text-gray-700 hover:bg-gray-50 rounded-md flex items-center" href="#" id="mobile-logout-button">
-                        <i class="fas fa-sign-out-alt w-5 mr-2 text-gray-400"></i> Logout
-                    </a>
-                </div>
+            <div>
+              <a id="view-task-link" href="#" class="text-blue-600 text-sm hover:underline hidden">
+                <i class="fas fa-external-link-alt mr-1"></i> View Task
+              </a>
             </div>
+          </div>
+          
+          <!-- Messages container -->
+          <div id="messages-container" class="flex-grow p-4 overflow-y-auto h-96 md:h-[calc(100vh-280px)] bg-gray-50">
+            <div id="no-chat-selected" class="flex flex-col items-center justify-center h-full text-gray-500">
+              <i class="fas fa-comments text-gray-300 text-5xl mb-4"></i>
+              <p>Select a conversation to start chatting</p>
+            </div>
+            
+            <div id="message-list" class="space-y-4 hidden">
+              <!-- Messages will be dynamically inserted here -->
+            </div>
+          </div>
+          
+          <!-- Message input -->
+          <div id="message-input-container" class="p-4 border-t border-gray-200 hidden">
+            <form id="message-form" class="flex">
+              <input type="text" id="message-input" placeholder="Type a message..." class="flex-grow px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+              <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-lg">
+                <i class="fas fa-paper-plane"></i>
+              </button>
+            </form>
+          </div>
         </div>
-    </header>
+      </div>
+    </div>
+  </main>
+  
+  <!-- Console output for debugging -->
+  <div id="debug-output" class="hidden fixed bottom-0 left-0 right-0 bg-black text-green-500 p-2 font-mono text-xs overflow-auto" style="max-height: 200px; z-index: 9999;">
+    <div class="flex justify-between">
+      <h4 class="font-bold">Debug Console</h4>
+      <button onclick="document.getElementById('debug-output').classList.add('hidden')" class="text-white">&times;</button>
+    </div>
+    <div id="debug-content"></div>
+  </div>
 
-    <!-- Main Content with padding for fixed header-->
-    <main class="pt-16 flex-grow flex flex-col lg:flex-row">
-        <!-- Chat Sidebar -->
-        <div class="chat-sidebar bg-white w-full lg:w-80 lg:border-r border-gray-200 flex-shrink-0 h-full">
-            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
-                <h2 class="font-semibold text-gray-800">Conversations</h2>
-                <a href="messages.html" class="text-primary hover:text-primary-dark">
-                    <i class="fas fa-external-link-alt"></i>
-                </a>
-            </div>
-            
-            <!-- Chat list -->
-            <div id="chat-list" class="overflow-y-auto h-96">
-                <div class="py-12 text-center text-gray-500">
-                    <i class="fas fa-spinner fa-spin text-xl"></i>
-                    <p class="mt-2">Loading...</p>
-                </div>
-            </div>
-        </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Check if user is logged in
+      const token = localStorage.getItem('token');
+      const username = localStorage.getItem('username');
+      const userId = localStorage.getItem('userId');
+      
+      if (!token || !userId) {
+        // Redirect to login page if not logged in
+        window.location.href = 'login.html?redirect=chat.html';
+        return;
+      }
+      
+      // Update user information
+      if (username) {
+        document.getElementById('user-avatar').textContent = username.charAt(0).toUpperCase();
+      }
+      
+      // Setup user dropdown
+      const userMenuButton = document.getElementById('user-menu-button');
+      const userDropdown = document.getElementById('user-dropdown');
+      
+      userMenuButton.addEventListener('click', function() {
+        userDropdown.classList.toggle('hidden');
+      });
+      
+      // Close dropdown when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!userMenuButton.contains(e.target) && !userDropdown.contains(e.target)) {
+          userDropdown.classList.add('hidden');
+        }
+      });
+      
+      // Setup logout button
+      document.getElementById('logout-button').addEventListener('click', function() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('username');
+        window.location.href = 'login.html';
+      });
+      
+      // Initialize chat functionality
+      initializeChat();
+    });
+    
+    // Global variables
+    let currentChatId = null;
+    let chatPollingInterval = null;
+    let lastMessageTimestamp = null;
+    const MESSAGE_POLLING_INTERVAL = 5000; // 5 seconds
+    
+    async function initializeChat() {
+      // Check URL parameters for direct chat or task-based chat
+      const urlParams = new URLSearchParams(window.location.search);
+      const chatId = urlParams.get('id');
+      const taskId = urlParams.get('taskId');
+      const recipientId = urlParams.get('recipientId');
+      
+      // First load all user chats
+      await loadUserChats();
+      
+      // If specific chat ID is provided, open that chat
+      if (chatId) {
+        openChat(chatId);
+      } 
+      // If task ID and recipient ID are provided, create or open that chat
+      else if (taskId && recipientId) {
+        await createOrOpenTaskChat(taskId, recipientId);
+      }
+      
+      // Set up message form submission
+      document.getElementById('message-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        sendMessage();
+      });
+    }
+    
+    async function loadUserChats() {
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
         
-        <!-- Chat Main Content -->
-        <div class="flex-grow flex flex-col h-full">
-            <!-- Chat Header -->
-            <div class="bg-white px-4 py-3 border-b border-gray-200 shadow-sm flex justify-between items-center">
-                <div class="flex items-center">
-                    <!-- Mobile sidebar toggle -->
-                    <button id="show-chats-btn" class="mr-3 lg:hidden text-gray-600 hover:text-primary">
-                        <i class="fas fa-bars"></i>
-                    </button>
-                    
-                    <!-- Recipient info -->
-                    <div id="recipient-avatar" class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-400 to-indigo-500 text-white flex items-center justify-center font-bold text-lg mr-3">
-                        ?
-                    </div>
-                    <div>
-                        <h2 id="recipient-name" class="font-semibold text-gray-800">Loading...</h2>
-                        <p id="task-title" class="text-xs text-gray-500">Task: Loading...</p>
-                    </div>
-                </div>
-                
-                <div class="flex space-x-2">
-                    <a id="view-profile-btn" href="#" class="text-sm text-primary hover:text-primary-dark transition-colors">
-                        View Profile
-                    </a>
-                    <a id="view-task-btn" href="#" class="text-sm text-primary hover:text-primary-dark transition-colors">
-                        View Task
-                    </a>
-                </div>
+        // Fetch user's chats
+        const response = await fetch(`${API_URL}/api/chats`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to load chats');
+        }
+        
+        const chats = await response.json();
+        updateChatList(chats);
+        
+      } catch (error) {
+        console.error('Error loading chats:', error);
+        showErrorMessage('Failed to load your conversations. Please try again later.');
+      }
+    }
+    
+    function updateChatList(chats) {
+      const chatListElement = document.getElementById('chat-list');
+      const noChatsMessage = document.getElementById('no-chats-message');
+      
+      // Clear existing chats
+      chatListElement.innerHTML = '';
+      
+      if (!chats || chats.length === 0) {
+        noChatsMessage.classList.remove('hidden');
+        return;
+      }
+      
+      noChatsMessage.classList.add('hidden');
+      
+      // Sort chats by latest message date
+      chats.sort((a, b) => {
+        const aTimestamp = a.lastMessage?.createdAt || a.updatedAt || a.createdAt;
+        const bTimestamp = b.lastMessage?.createdAt || b.updatedAt || b.createdAt;
+        return new Date(bTimestamp) - new Date(aTimestamp);
+      });
+      
+      // Add each chat to the list
+      chats.forEach(chat => {
+        const chatItem = createChatListItem(chat);
+        chatListElement.appendChild(chatItem);
+      });
+    }
+    
+    function createChatListItem(chat) {
+      const userId = localStorage.getItem('userId');
+      
+      // Determine the other user in the chat
+      const otherUser = chat.participants.find(p => p.userId !== userId);
+      const otherUsername = otherUser ? otherUser.username : 'Unknown User';
+      
+      // Get chat preview info
+      const lastMessage = chat.lastMessage?.content || 'No messages yet';
+      const lastMessageTime = formatTimestamp(chat.lastMessage?.createdAt || chat.updatedAt || chat.createdAt);
+      
+      // Create chat list item element
+      const chatItem = document.createElement('div');
+      chatItem.className = 'chat-list-item p-4 border-b border-gray-200 hover:bg-gray-50 cursor-pointer';
+      chatItem.dataset.chatId = chat._id || chat.id;
+      
+      // Check if there are unread messages
+      const hasUnread = chat.unreadCount && chat.unreadCount > 0;
+      
+      chatItem.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-medium">
+              ${otherUsername.charAt(0).toUpperCase()}
             </div>
-            
-            <!-- Messages Container -->
-            <div id="messages-container" class="flex-grow overflow-y-auto p-4 bg-gray-50">
-                <div class="flex justify-center py-12">
-                    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-                </div>
+            <div class="ml-3">
+              <h4 class="font-medium ${hasUnread ? 'text-black font-bold' : 'text-gray-800'}">${otherUsername}</h4>
+              <p class="text-xs ${hasUnread ? 'text-black font-medium' : 'text-gray-500'} truncate" style="max-width: 160px;">
+                ${lastMessage}
+              </p>
             </div>
-            
-            <!-- Message Input -->
-            <div class="bg-white border-t border-gray-200 p-4">
-                <form id="message-form" class="flex items-end">
-                    <div class="flex-grow mr-2">
-                        <textarea 
-                            id="message-input" 
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                            placeholder="Type a message..." 
-                            rows="1"></textarea>
-                    </div>
-                    <button type="submit" class="bg-primary hover:bg-primary-dark text-white p-3 rounded-full transition-colors flex-shrink-0">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </form>
-            </div>
+          </div>
+          <div>
+            <span class="text-xs text-gray-500">${lastMessageTime}</span>
+            ${hasUnread ? `<span class="block text-xs text-white bg-blue-600 rounded-full w-5 h-5 flex items-center justify-center mt-1">${chat.unreadCount}</span>` : ''}
+          </div>
         </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-8">
-        <div class="container mx-auto px-4">
-            <div class="grid md:grid-cols-4 gap-8">
-                <div>
-                    <a class="text-white font-bold text-2xl flex items-center mb-4" href="index.html">
-                        <span class="bg-white text-primary p-1 rounded mr-1.5 flex items-center justify-center w-8 h-8">V</span>ictor
-                    </a>
-                    <p class="text-gray-300 mb-4">Connecting people for tasks - anytime, anywhere. Get help or help others.</p>
-                    <div class="flex space-x-4">
-                        <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-facebook-f"></i></a>
-                        <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-instagram"></i></a>
-                        <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-linkedin-in"></i></a>
-                    </div>
-                </div>
-                
-                <div>
-                    <h4 class="font-semibold mb-4 text-lg">For Task Posters</h4>
-                    <ul class="space-y-2">
-                        <li><a href="post-task.html" class="text-gray-300 hover:text-white transition-colors">Post a Task</a></li>
-                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">How it Works</a></li>
-                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Pricing</a></li>
-                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">FAQ</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h4 class="font-semibold mb-4 text-lg">For Task Performers</h4>
-                    <ul class="space-y-2">
-                        <li><a href="tasks.html" class="text-gray-300 hover:text-white transition-colors">Browse Tasks</a></li>
-                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Task Categories</a></li>
-                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Earn Money</a></li>
-                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Success Stories</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h4 class="font-semibold mb-4 text-lg">Support</h4>
-                    <ul class="space-y-2">
-                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Help Center</a></li>
-                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Contact Us</a></li>
-                        <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Privacy Policy</a></li>
-                        <li><a href="server-status.html" class="text-gray-300 hover:text-white transition-colors">Server Status</a></li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="border-t border-gray-700 mt-8 pt-8 text-center">
-                <p class="text-gray-300">© 2023 Victor - Connect for Tasks. All rights reserved.</p>
-            </div>
+        ${chat.taskId ? `
+          <div class="mt-1 pl-13">
+            <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+              <i class="fas fa-clipboard-list mr-1"></i>
+              ${chat.taskTitle || 'Task'}
+            </span>
+          </div>
+        ` : ''}
+      `;
+      
+      // Add click event to open the chat
+      chatItem.addEventListener('click', function() {
+        const chatId = this.dataset.chatId;
+        openChat(chatId);
+        
+        // Mark chat as active
+        document.querySelectorAll('.chat-list-item').forEach(item => {
+          item.classList.remove('active');
+        });
+        this.classList.add('active');
+      });
+      
+      return chatItem;
+    }
+    
+    async function openChat(chatId) {
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        // Fetch chat details
+        const response = await fetch(`${API_URL}/api/chats/${chatId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to load chat details');
+        }
+        
+        const chat = await response.json();
+        
+        // Set current chat ID
+        currentChatId = chatId;
+        
+        // Update chat header
+        updateChatHeader(chat);
+        
+        // Show message input
+        document.getElementById('message-input-container').classList.remove('hidden');
+        
+        // Hide no chat selected message
+        document.getElementById('no-chat-selected').classList.add('hidden');
+        
+        // Show message list
+        document.getElementById('message-list').classList.remove('hidden');
+        
+        // Load messages
+        await loadMessages(chatId);
+        
+        // Mark chat as read
+        markChatAsRead(chatId);
+        
+        // Setup message polling
+        setupMessagePolling(chatId);
+        
+      } catch (error) {
+        console.error('Error opening chat:', error);
+        showErrorMessage('Failed to open the conversation. Please try again.');
+      }
+    }
+    
+    function updateChatHeader(chat) {
+      const userId = localStorage.getItem('userId');
+      
+      // Find the other participant
+      const otherUser = chat.participants.find(p => p.userId !== userId);
+      const recipientName = otherUser ? otherUser.username : 'Unknown User';
+      
+      // Update header elements
+      document.getElementById('chat-recipient-name').textContent = recipientName;
+      document.getElementById('chat-avatar').textContent = recipientName.charAt(0).toUpperCase();
+      
+      // Update task info if exists
+      if (chat.taskId) {
+        document.getElementById('chat-task-title').textContent = chat.taskTitle || 'Related to a task';
+        
+        // Show view task link
+        const viewTaskLink = document.getElementById('view-task-link');
+        viewTaskLink.href = `task-detail.html?id=${chat.taskId}`;
+        viewTaskLink.classList.remove('hidden');
+      } else {
+        document.getElementById('chat-task-title').textContent = '';
+        document.getElementById('view-task-link').classList.add('hidden');
+      }
+    }
+    
+    async function loadMessages(chatId) {
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        // Fetch messages for the chat
+        const response = await fetch(`${API_URL}/api/chats/${chatId}/messages`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to load messages');
+        }
+        
+        const messages = await response.json();
+        displayMessages(messages);
+        
+      } catch (error) {
+        console.error('Error loading messages:', error);
+        showErrorMessage('Failed to load messages. Please try again.');
+      }
+    }
+    
+    function displayMessages(messages) {
+      const messageList = document.getElementById('message-list');
+      const userId = localStorage.getItem('userId');
+      
+      // Clear existing messages
+      messageList.innerHTML = '';
+      
+      if (messages.length === 0) {
+        messageList.innerHTML = `
+          <div class="text-center py-4 text-gray-500">
+            <p>No messages yet. Start the conversation!</p>
+          </div>
+        `;
+        return;
+      }
+      
+      // Sort messages by date
+      messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      
+      // Set the last message timestamp
+      if (messages.length > 0) {
+        lastMessageTimestamp = messages[messages.length - 1].createdAt;
+      }
+      
+      // Group messages by date
+      const dateGroups = groupMessagesByDate(messages);
+      
+      // Display messages by date groups
+      Object.keys(dateGroups).forEach(dateKey => {
+        // Add date separator
+        const dateSeparator = document.createElement('div');
+        dateSeparator.className = 'flex justify-center my-4';
+        dateSeparator.innerHTML = `
+          <span class="px-4 py-1 bg-gray-200 rounded-full text-xs text-gray-600">
+            ${formatDateHeader(dateKey)}
+          </span>
+        `;
+        messageList.appendChild(dateSeparator);
+        
+        // Add messages for this date
+        dateGroups[dateKey].forEach(message => {
+          const isOwnMessage = message.senderId === userId;
+          const messageElement = createMessageElement(message, isOwnMessage);
+          messageList.appendChild(messageElement);
+        });
+      });
+      
+      // Scroll to bottom
+      scrollToBottom();
+    }
+    
+    function groupMessagesByDate(messages) {
+      const groups = {};
+      
+      messages.forEach(message => {
+        const date = new Date(message.createdAt);
+        const dateKey = date.toDateString();
+        
+        if (!groups[dateKey]) {
+          groups[dateKey] = [];
+        }
+        
+        groups[dateKey].push(message);
+      });
+      
+      return groups;
+    }
+    
+    function createMessageElement(message, isOwnMessage) {
+      const messageContainer = document.createElement('div');
+      messageContainer.className = isOwnMessage ? 'flex justify-end mb-3' : 'flex justify-start mb-3';
+      
+      const time = formatTimestamp(message.createdAt, true);
+      // Always use content field for message text
+      const messageText = message.content;
+      
+      messageContainer.innerHTML = `
+        <div class="message-bubble ${isOwnMessage ? 'sender' : 'receiver'} px-4 py-2">
+          <p>${messageText}</p>
+          <p class="text-xs text-gray-500 text-right mt-1">${time}</p>
         </div>
-    </footer>
+      `;
+      
+      return messageContainer;
+    }
+    
+    async function sendMessage() {
+      const messageInput = document.getElementById('message-input');
+      const content = messageInput.value.trim();
+      
+      if (!content || !currentChatId) return;
+      
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        // Send message to API
+        const response = await fetch(`${API_URL}/api/chats/${currentChatId}/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ content })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to send message');
+        }
+        
+        // Clear input
+        messageInput.value = '';
+        
+        // Reload messages
+        await loadMessages(currentChatId);
+        
+        // Refresh chat list to update last message
+        await loadUserChats();
+        
+      } catch (error) {
+        console.error('Error sending message:', error);
+        showErrorMessage('Failed to send message. Please try again.');
+      }
+    }
+    
+    async function markChatAsRead(chatId) {
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        // Mark chat as read
+        const response = await fetch(`${API_URL}/api/chats/${chatId}/read`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          // Update chat list to remove unread indicator
+          const chatItem = document.querySelector(`.chat-list-item[data-chat-id="${chatId}"]`);
+          if (chatItem) {
+            const unreadBadge = chatItem.querySelector('.bg-blue-600');
+            if (unreadBadge) unreadBadge.remove();
+            
+            // Update text style
+            const nameElement = chatItem.querySelector('h4');
+            const previewElement = chatItem.querySelector('p');
+            
+            if (nameElement) nameElement.classList.remove('font-bold');
+            if (previewElement) previewElement.classList.remove('font-medium', 'text-black');
+          }
+        }
+      } catch (error) {
+        console.error('Error marking chat as read:', error);
+      }
+    }
+    
+    function setupMessagePolling(chatId) {
+      // Clear any existing polling
+      if (chatPollingInterval) {
+        clearInterval(chatPollingInterval);
+      }
+      
+      // Set up new polling
+      chatPollingInterval = setInterval(async () => {
+        await checkForNewMessages(chatId);
+      }, MESSAGE_POLLING_INTERVAL);
+    }
+    
+    async function checkForNewMessages(chatId) {
+      if (!chatId) return;
+      
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        let url = `${API_URL}/api/chats/${chatId}/messages`;
+        
+        // If we have a last message timestamp, only get newer messages
+        if (lastMessageTimestamp) {
+          url += `?since=${new Date(lastMessageTimestamp).toISOString()}`;
+        }
+        
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to check for new messages');
+        }
+        
+        const messages = await response.json();
+        
+        // If there are new messages, reload the full chat
+        if (messages.length > 0) {
+          await loadMessages(chatId);
+          await loadUserChats(); // Refresh chat list to show new messages
+        }
+        
+      } catch (error) {
+        console.error('Error checking for new messages:', error);
+      }
+    }
+    
+    async function createOrOpenTaskChat(taskId, recipientId) {
+      try {
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        const token = localStorage.getItem('token');
+        
+        // Call API to create or get existing chat
+        const response = await fetch(`${API_URL}/api/chats/create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ taskId, recipientId })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to create chat');
+        }
+        
+        const chat = await response.json();
+        
+        // Get the chatId (different APIs might return different structures)
+        const chatId = chat.id || chat._id || chat.chatId;
+        
+        if (!chatId) {
+          throw new Error('Invalid chat data returned from server');
+        }
+        
+        // Reload chat list to show new chat
+        await loadUserChats();
+        
+        // Open the new chat
+        openChat(chatId);
+        
+      } catch (error) {
+        console.error('Error creating chat:', error);
+        showErrorMessage('Failed to start conversation. Please try again.');
+      }
+    }
+    
+    function formatTimestamp(timestamp, includeTime = false) {
+      if (!timestamp) return '';
+      
+      const date = new Date(timestamp);
+      const now = new Date();
+      const isToday = date.toDateString() === now.toDateString();
+      const isYesterday = new Date(now - 86400000).toDateString() === date.toDateString();
+      
+      if (isToday) {
+        return includeTime ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today';
+      } else if (isYesterday) {
+        return 'Yesterday';
+      } else {
+        const options = { month: 'short', day: 'numeric' };
+        if (date.getFullYear() !== now.getFullYear()) {
+          options.year = 'numeric';
+        }
+        return date.toLocaleDateString([], options);
+      }
+    }
+    
+    function formatDateHeader(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const isToday = date.toDateString() === now.toDateString();
+      const isYesterday = new Date(now - 86400000).toDateString() === date.toDateString();
+      
+      if (isToday) {
+        return 'Today';
+      } else if (isYesterday) {
+        return 'Yesterday';
+      } else {
+        return date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+      }
+    }
+    
+    function showErrorMessage(message) {
+      const messageList = document.getElementById('message-list');
+      
+      messageList.innerHTML = `
+        <div class="flex justify-center py-4">
+          <div class="bg-red-50 text-red-600 px-4 py-2 rounded-lg">
+            <i class="fas fa-exclamation-circle mr-2"></i> ${message}
+          </div>
+        </div>
+      `;
+    }
+    
+    function scrollToBottom() {
+      const messagesContainer = document.getElementById('messages-container');
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
 
-    <!-- Scripts -->
-    <script src="js/main.js"></script>
-    <script src="js/chat-system.js"></script>
-    <script src="js/chat-page.js"></script>
-    <!-- Chat system notifications -->
-    <script src="js/chat-notifications.js"></script>
+    // Add a debug logger that shows console messages on screen (useful for mobile debugging)
+    function enableDebugMode() {
+      const debugOutput = document.getElementById('debug-output');
+      const debugContent = document.getElementById('debug-content');
+      
+      if (debugOutput && debugContent) {
+        debugOutput.classList.remove('hidden');
+        
+        // Override console.log
+        const oldLog = console.log;
+        console.log = function(...args) {
+          oldLog.apply(console, args);
+          const message = args.map(arg => {
+            if (typeof arg === 'object') {
+              return JSON.stringify(arg);
+            } else {
+              return arg;
+            }
+          }).join(' ');
+          
+          debugContent.innerHTML += `<div>${message}</div>`;
+          debugContent.scrollTop = debugContent.scrollHeight;
+        };
+        
+        // Override console.error
+        const oldError = console.error;
+        console.error = function(...args) {
+          oldError.apply(console, args);
+          const message = args.map(arg => {
+            if (typeof arg === 'object') {
+              return JSON.stringify(arg);
+            } else {
+              return arg;
+            }
+          }).join(' ');
+          
+          debugContent.innerHTML += `<div class="text-red-500">${message}</div>`;
+          debugContent.scrollTop = debugContent.scrollHeight;
+        };
+      }
+    }
+    
+    // Enable debug mode with URL parameter ?debug=true
+    if (new URLSearchParams(window.location.search).get('debug') === 'true') {
+      enableDebugMode();
+    }
+  </script>
 </body>
 </html>

@@ -365,9 +365,28 @@ const AcceptedTasks = {
 };
 
 // Initialize on DOM load
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
+  // Get API URL from config
+  const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+  
+  // Mobile menu toggle
+  document.getElementById('mobile-menu-button').addEventListener('click', function() {
+    document.getElementById('mobile-menu').classList.toggle('hidden');
+  });
+  
+  // Setup chat icon listener
+  const chatIcon = document.querySelector('.chat-icon');
+  if (chatIcon) {
+    chatIcon.addEventListener('click', function() {
+      window.location.href = 'chat.html';
+    });
+  }
+  
+  // Rest of the initialization code...
   AcceptedTasks.init();
 });
 
 // Make the module globally available
 window.AcceptedTasks = AcceptedTasks;
+
+<script src="js/chat.js"></script>

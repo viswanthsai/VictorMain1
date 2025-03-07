@@ -50,8 +50,11 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <!-- Custom chat icon CSS -->
   <link rel="stylesheet" href="/css/chat-icon.css">
+  <link rel="stylesheet" href="css/chat-icon.css">
   <!-- Sweet Alert for better notifications -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="css/chat-icon.css">
+  <script src="js/chat.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans pt-16">
   <!-- Header -->
@@ -73,7 +76,7 @@
         </div>
         
         <!-- Mobile menu button -->
-        <button class="md:hidden text-gray-600 focus:outline-none" id="mobile-menu-button">
+        <button class="md:hidden text-gray-600 focus:outline-none" id="mobile-menu-button" aria-label="Toggle menu" data-target="mobile-menu">
           <i class="fas fa-bars text-xl"></i>
         </button>
         
@@ -100,9 +103,9 @@
           </div>
           
           <!-- Chat icon -->
-          <a href="chat.html" class="p-2 text-gray-600 hover:text-primary rounded-full hover:bg-gray-100 relative">
+          <a href="chat.html" class="p-2 text-gray-600 hover:text-primary rounded-full hover:bg-gray-100 relative" title="Chat Messages" aria-label="View Chat Messages">
             <i class="fas fa-comments"></i>
-            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full" id="chat-count" style="display: none;">0</span>
+            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full chat-count-badge hidden" id="chat-count">0</span>
           </a>
           
           <!-- User dropdown -->
@@ -237,13 +240,15 @@
       <div class="bg-white rounded-xl shadow-sm p-4 mb-6 border border-gray-100">
         <div class="flex flex-wrap justify-between gap-4">
           <div class="flex items-center space-x-2">
-            <select id="filter-status" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
+            <label for="filter-status" class="sr-only">Filter by status</label>
+            <select id="filter-status" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" aria-label="Filter tasks by status" title="Filter by status">
               <option value="">All Statuses</option>
               <option value="In Progress" selected>In Progress</option>
               <option value="Completed">Completed</option>
             </select>
             
-            <select id="filter-deadline" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
+            <label for="filter-deadline" class="sr-only">Filter by deadline</label>
+            <select id="filter-deadline" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" aria-label="Filter tasks by deadline" title="Filter by deadline">
               <option value="">All Deadlines</option>
               <option value="upcoming">Upcoming (7 days)</option>
               <option value="urgent">Urgent (3 days)</option>
@@ -310,12 +315,12 @@
           <a class="text-white font-bold text-2xl flex items-center mb-4" href="index.html">
             <span class="bg-white text-primary p-1 rounded mr-1.5 flex items-center justify-center w-8 h-8">V</span>ictor
           </a>
-          <p class="text-gray-300 mb-4">Connecting people for tasks - anytime, anywhere. Get help or help others.</p>
-          <div class="flex space-x-4">
-            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-facebook-f"></i></a>
-            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-twitter"></i></a>
-            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-instagram"></i></a>
-            <a href="#" class="text-gray-300 hover:text-white transition-colors"><i class="fab fa-linkedin-in"></i></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors" title="Facebook" aria-label="Visit our Facebook page"><i class="fab fa-facebook-f"></i><span class="sr-only">Facebook</span></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors" title="Twitter" aria-label="Visit our Twitter page"><i class="fab fa-twitter"></i><span class="sr-only">Twitter</span></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors" title="Instagram" aria-label="Visit our Instagram page"><i class="fab fa-instagram"></i><span class="sr-only">Instagram</span></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors" title="LinkedIn" aria-label="Visit our LinkedIn page"><i class="fab fa-linkedin-in"></i><span class="sr-only">LinkedIn</span></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors" title="Instagram" aria-label="Visit our Instagram page"><i class="fab fa-instagram"></i><span class="sr-only">Instagram</span></a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors" title="LinkedIn" aria-label="Visit our LinkedIn page"><i class="fab fa-linkedin-in"></i><span class="sr-only">LinkedIn</span></a>
           </div>
         </div>
         
@@ -326,6 +331,12 @@
             <li><a href="#" class="text-gray-300 hover:text-white transition-colors">How it Works</a></li>
             <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Pricing</a></li>
             <li><a href="#" class="text-gray-300 hover:text-white transition-colors">FAQ</a></li>
+            <li class="flex items-start">
+              <div class="shrink-0 h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center mr-2 mt-0.5">
+                <i class="fas fa-check text-blue-600 text-xs"></i>
+              </div>
+              <span class="text-sm text-gray-700">Add photos or documents if helpful</span>
+            </li>
           </ul>
         </div>
         
@@ -510,12 +521,17 @@
       const tasksContainer = document.getElementById('tasks-container');
       
       try {
+        // Define API_URL first before using it
+        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
+        
+        if (!API_URL) {
+          throw new Error('API URL is not configured');
+        }
         // Show loading state
         loadingContainer.classList.remove('hidden');
         emptyContainer.classList.add('hidden');
         tasksContainer.classList.add('hidden');
         
-        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
         const userId = localStorage.getItem('userId');
         const token = localStorage.getItem('token');
         
@@ -871,7 +887,7 @@
             </button>
             ${task.posterVerifiedCompletion ? `
               <div class="bg-green-100 text-green-600 text-sm px-3 py-2 rounded flex-1 flex items-center justify-center">
-                <i class="fas fa-badge-check mr-2"></i> Verified Complete
+                <i class="fas fa-check-circle mr-2"></i> Verified Complete
               </div>
             ` : ''}
             `}
@@ -994,8 +1010,16 @@
                 loadAcceptedTasks();
               } else {
                 // If server returned an error
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to mark task as complete');
+                let errorMessage = 'Failed to mark task as complete';
+                try {
+                  const errorData = await response.json();
+                  if (errorData && errorData.message) {
+                    errorMessage = errorData.message;
+                  }
+                } catch (e) {
+                  // Response wasn't JSON
+                }
+                throw new Error(errorMessage);
               }
             } catch (error) {
               console.error('Error marking task as complete:', error);
@@ -1287,7 +1311,18 @@
       // Redirect to login page
       window.location.href = 'login.html';
     }
+
+    // Add this near the end of the script section
+    document.addEventListener('DOMContentLoaded', function() {
+      const chatIcon = document.querySelector('.chat-icon');
+      if (chatIcon) {
+        chatIcon.addEventListener('click', function() {
+          window.location.href = 'chat.html';
+        });
+      }
+    });
 </script>
 <script src="/js/chat.js"></script>
+<script src="js/chat.js"></script>
 </body>
 </html>

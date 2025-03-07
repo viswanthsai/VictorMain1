@@ -10,12 +10,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // User dropdown toggle
+  // User dropdown toggle - Setup this regardless of auth state
+  setupUserDropdown();
+  
+  // Check login status and update UI
+  checkLoginStatus();
+});
+
+// Setup user dropdown function
+function setupUserDropdown() {
   const userMenuButton = document.getElementById('user-menu-button');
   const userDropdown = document.getElementById('user-dropdown');
   
   if (userMenuButton && userDropdown) {
-    userMenuButton.addEventListener('click', function() {
+    userMenuButton.addEventListener('click', function(e) {
+      e.stopPropagation();
       userDropdown.classList.toggle('hidden');
     });
     
@@ -26,10 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
-  
-  // Check login status and update UI
-  checkLoginStatus();
-});
+}
 
 // Check login status and update UI accordingly
 function checkLoginStatus() {

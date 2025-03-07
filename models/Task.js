@@ -19,6 +19,25 @@ const taskSchema = new mongoose.Schema({
     type: String,
     default: 'Remote'
   },
+  specificLocation: {
+    type: String,
+    default: null
+  },
+  contactDetails: {
+    phone: {
+      type: String,
+      default: null
+    },
+    email: {
+      type: String,
+      default: null
+    },
+    preferredMethod: {
+      type: String,
+      default: 'platform',
+      enum: ['phone', 'email', 'platform']
+    }
+  },
   status: {
     type: String,
     enum: ['Open', 'In Progress', 'Completed', 'Cancelled'],
@@ -57,6 +76,10 @@ const taskSchema = new mongoose.Schema({
   completedAt: {
     type: Date,
     default: null
+  },
+  urgent: {
+    type: Boolean,
+    default: false
   },
   createdAt: {
     type: Date,
