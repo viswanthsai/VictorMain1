@@ -57,6 +57,26 @@
     ];
   }
 
+  // Determine the current environment
+  const hostname = window.location.hostname;
+  let apiUrl;
+  
+  if (hostname === 'https://victortasks.site' || hostname === 'https://www.victortasks.site') {
+    apiUrl = 'https://victormain1.onrender.com'; // Your API URL
+  } else if (hostname === 'victormain1.onrender.com') {
+    apiUrl = 'https://victormain1.onrender.com'; // Same as above for Render domain
+  } else {
+    // Local development
+    apiUrl = 'http://localhost:9000';
+  }
+  
+  // Make config available globally
+  window.API_CONFIG = {
+    API_URL: apiUrl
+  };
+  
+  console.log('API URL configured:', apiUrl);
+
   // Initialize API config
   window.API_CONFIG = {
     API_URL: window.location.hostname === 'victormain1.onrender.com' || 

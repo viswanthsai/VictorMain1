@@ -19,6 +19,26 @@ const RENDER_URL = process.env.RENDER_URL || 'https://victormain1.onrender.com';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-for-development-only';
 const PORT = process.env.PORT || 9000;
 
+// Add at the top of server.js
+app.use((req, res, next) => {
+  const allowedHosts = [
+    'victormain1.onrender.com',
+    'victortasks.site',
+    'www.victortasks.site',
+    'localhost'
+  ];
+  
+  const host = req.hostname;
+  const isAllowed = allowedHosts.some(allowedHost => host === allowedHost || host.endsWith('.' + allowedHost));
+  
+  if (isAllowed) {
+    next();
+  } else {
+    console.warn(`Request from disallowed host: ${host}`);
+    res.status(403).send('Access denied: Host not allowed');
+  }
+});
+
 // MongoDB connection string
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://viswanthsai:QWEASDZXC1q@cluster0.6ndpu.mongodb.net/victorDB?retryWrites=true&w=majority&appName=Cluster0";
 
@@ -56,18 +76,21 @@ mongoose.connection.on('disconnected', () => {
   console.log('Mongoose disconnected');
 });
 
-// Configure CORS
+// Update CORS configuration in server.js
 const corsOptions = {
   origin: [
-    'https://viswanthsai.github.io', 
-    'http://127.0.0.1:5502', 
-    'http://localhost:5502',
-    'http://localhost:9000',
-    'https://victormain1.onrender.com',  
-    'https://victormain1-1.onrender.com'
+    'https://victormain1.onrender.com',
+    'http://victormain1.onrender.com',
+    'https://victortasks.site',
+    'http://victortasks.site',
+    'https://www.victortasks.site',
+    'http://www.victortasks.site',
+    'http://localhost:3000',  // For local development
+    'http://localhost:9000'   // For local API
   ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 app.use(cors(corsOptions));
