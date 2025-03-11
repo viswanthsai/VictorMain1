@@ -45,7 +45,7 @@
         
         // Use status endpoint for quick check
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased timeout
         
         const response = await fetch(`${url}/api/status`, {
           signal: controller.signal,
@@ -59,6 +59,25 @@
         clearTimeout(timeoutId);
         
         if (response.ok) {
+          // Store the API URL to localStorage
+          localStorage.setItem('apiUrl', url);
+          console.log(`Successfully connected to API at ${url}`);
+          
+          // Try to check MongoDB status on this API
+          try {
+            const dbResponse = await fetch(`${url}/api/db-test`, {
+              cache: 'no-store',
+              headers: { 'Accept': 'application/json' }
+            });
+            
+            if (dbResponse.ok) {
+              const dbData = await dbResponse.json();
+              console.log(`MongoDB status: ${dbData.status}, readyState: ${dbData.readyState}`);
+            }
+          } catch (dbError) {
+            console.warn('Error checking MongoDB status:', dbError);
+          }
+          
           return url;
         } else {
           console.warn(`API at ${url} responded with status ${response.status}`);

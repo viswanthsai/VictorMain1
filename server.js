@@ -616,7 +616,7 @@ app.get('/api/tasks', async (req, res) => {
     let tasks;
     const { category, status, search } = req.query;
     
-    if (mongoConnected) {
+    if (mongoConnected && mongoose.connection.readyState === 1) {
       // MongoDB version
       let query = {};
       
@@ -625,31 +625,48 @@ app.get('/api/tasks', async (req, res) => {
       if (status) query.status = status;
       if (search) query.title = { $regex: search, $options: 'i' };
       
-      tasks = await Task.find(query).lean();
+      try {
+        tasks = await Task.find(query).lean();
+        console.log(`Found ${tasks.length} tasks in MongoDB`);
+      } catch (dbError) {
+        console.error('MongoDB query error:', dbError);
+        // Fall back to file-based storage if MongoDB query fails
+        tasks = await readData(TASKS_FILE);
+      }
     } else {
       // File-based version
-      tasks = await readData(TASKS_FILE);
-      
-      // Apply filters if provided
-      if (category) {
-        tasks = tasks.filter(task => task.category === category);
-      }
-      if (status) {
-        tasks = tasks.filter(task => task.status === status);
-      }
-      if (search) {
-        const searchLower = search.toLowerCase();
-        tasks = tasks.filter(task => 
-          task.title.toLowerCase().includes(searchLower) || 
-          (task.description && task.description.toLowerCase().includes(searchLower))
-        );
+      try {
+        tasks = await readData(TASKS_FILE);
+        console.log(`Found ${tasks.length} tasks in file storage`);
+        
+        // Apply filters if provided
+        if (category) {
+          tasks = tasks.filter(task => task.category === category);
+        }
+        if (status) {
+          tasks = tasks.filter(task => task.status === status);
+        }
+        if (search) {
+          const searchLower = search.toLowerCase();
+          tasks = tasks.filter(task => 
+            task.title.toLowerCase().includes(searchLower) || 
+            (task.description && task.description.toLowerCase().includes(searchLower))
+          );
+        }
+      } catch (fileError) {
+        console.error('File reading error:', fileError);
+        // If file reading fails, return empty array
+        tasks = [];
       }
     }
     
     res.json(tasks);
   } catch (error) {
     console.error('Error in GET /api/tasks:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ 
+      message: 'Server error loading tasks', 
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message 
+    });
   }
 });
 

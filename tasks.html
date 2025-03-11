@@ -487,20 +487,8 @@
     // Setup event listeners first
     setupEventListeners();
     
-    // Initialize API Manager if available
-    if (window.ApiManager) {
-      console.log('API Manager found, finding working endpoint...');
-      ApiManager.findWorkingEndpoint().then(url => {
-        console.log('Using API URL:', url);
-        loadTasks();
-      }).catch(error => {
-        console.error('Failed to find working API endpoint:', error);
-        loadTasks(); // Try anyway with default URL
-      });
-    } else {
-      console.log('API Manager not found, using default loading');
-      loadTasks();
-    }
+    // Load tasks with better error handling
+    loadTasks();
     
     // Check login status
     checkLoginStatus();
@@ -523,7 +511,8 @@
       minBudget: '',
       maxBudget: ''
     },
-    sort: 'newest'
+    sort: 'newest',
+    isLoading: false
   };
   
   // Setup event listeners
@@ -631,14 +620,68 @@
   // Load tasks from API with better error handling
   async function loadTasks() {
     try {
+      // Prevent duplicate loading
+      if (state.isLoading) return;
+      state.isLoading = true;
+      
       // Show loading state
       document.getElementById('loading-container').classList.remove('hidden');
       document.getElementById('tasks-container').classList.add('hidden');
       document.getElementById('error-container').classList.add('hidden');
       document.getElementById('empty-container').classList.add('hidden');
       
-      let tasks = [];
+      console.log("Starting to load tasks...");
       
+      // Check if TaskUtils is properly defined
+      if (window.TaskUtils && typeof TaskUtils.loadTasks === 'function') {
+        try {
+          console.log("Using TaskUtils.loadTasks");
+          
+          const tasks = await TaskUtils.loadTasks({
+            showErrorCallback: (errorMessage) => {
+              console.log("Error callback triggered:", errorMessage);
+              document.getElementById('loading-container').classList.add('hidden');
+              document.getElementById('tasks-container').classList.add('hidden');
+              document.getElementById('error-container').classList.remove('hidden');
+              document.getElementById('empty-container').classList.add('hidden');
+            },
+            useMockData: false // Explicitly set to false to prevent mock data
+          });
+          
+          console.log(`Loaded ${tasks.length} tasks`);
+          
+          // Store tasks and update UI
+          state.tasks = tasks;
+          state.filteredTasks = [...tasks];
+          
+          // Apply current filters and sort
+          filterAndDisplayTasks();
+        } catch (utilsError) {
+          console.error("Error using TaskUtils.loadTasks:", utilsError);
+          // Fall back to direct implementation
+          await fallbackLoadTasks();
+        }
+      } else {
+        // Fallback implementation
+        console.warn('TaskUtils.loadTasks not available, using fallback');
+        await fallbackLoadTasks();
+      }
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+      
+      // Show error state
+      document.getElementById('loading-container').classList.add('hidden');
+      document.getElementById('tasks-container').classList.add('hidden');
+      document.getElementById('error-container').classList.remove('hidden');
+      document.getElementById('empty-container').classList.add('hidden');
+    } finally {
+      state.isLoading = false;
+    }
+  }
+  
+  // Fallback implementation for loading tasks
+  async function fallbackLoadTasks() {
+    try {
       // Try multiple API endpoints
       const apiUrls = [
         localStorage.getItem('apiUrl'),
@@ -650,20 +693,27 @@
       
       let success = false;
       let lastError = null;
+      let tasks = [];
       
       for (const url of apiUrls) {
         try {
           console.log(`Attempting to fetch tasks from ${url}`);
           
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 8000);
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // Increased timeout
+          
+          const headers = { 'Accept': 'application/json' };
+          
+          // Add auth token if available
+          const token = localStorage.getItem('token');
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
           
           const response = await fetch(`${url}/api/tasks`, {
             signal: controller.signal,
-            headers: {
-              'Accept': 'application/json',
-              'Authorization': localStorage.getItem('token') ? `Bearer ${localStorage.getItem('token')}` : undefined
-            }
+            headers: headers,
+            cache: 'no-store'
           });
           
           clearTimeout(timeoutId);
@@ -687,6 +737,7 @@
       }
       
       if (!success) {
+        // If API request fails, throw error instead of using mock data
         throw lastError || new Error('Failed to fetch tasks from any API endpoint');
       }
       
@@ -698,13 +749,8 @@
       filterAndDisplayTasks();
       
     } catch (error) {
-      console.error('Error loading tasks:', error);
-      
-      // Show error state
-      document.getElementById('loading-container').classList.add('hidden');
-      document.getElementById('tasks-container').classList.add('hidden');
-      document.getElementById('error-container').classList.remove('hidden');
-      document.getElementById('empty-container').classList.add('hidden');
+      console.error("Final fallback attempt failed:", error);
+      throw error; // Re-throw for the outer catch block
     }
   }
   
@@ -776,11 +822,13 @@
     const tasksContainer = document.getElementById('tasks-container');
     const loadingContainer = document.getElementById('loading-container');
     const emptyContainer = document.getElementById('empty-container');
+    const errorContainer = document.getElementById('error-container');
     
     if (!tasksContainer || !loadingContainer || !emptyContainer) return;
     
-    // Hide loading state
+    // Hide loading and error states
     loadingContainer.classList.add('hidden');
+    errorContainer.classList.add('hidden');
     
     // Check if we have tasks after filtering
     if (state.filteredTasks.length === 0) {
@@ -796,6 +844,9 @@
     // Clear container
     tasksContainer.innerHTML = '';
     
+    // Reset display style in case it was explicitly set 
+    tasksContainer.style.display = 'grid';
+    
     // Calculate pagination
     const startIndex = (state.currentPage - 1) * state.tasksPerPage;
     const endIndex = Math.min(startIndex + state.tasksPerPage, state.filteredTasks.length);
@@ -803,15 +854,38 @@
     // Display tasks for current page
     for (let i = startIndex; i < endIndex; i++) {
       const task = state.filteredTasks[i];
-      const taskCard = createTaskCard(task);
-      tasksContainer.appendChild(taskCard);
+      
+      // Ensure task has critical fields to avoid errors
+      if (!task) continue;
+      
+      try {
+        // Create task card with error handling
+        let taskCard;
+        
+        // Use TaskUtils if available and working
+        if (window.TaskUtils && typeof TaskUtils.createTaskCard === 'function') {
+          taskCard = TaskUtils.createTaskCard(task);
+        } else {
+          // Fallback to the simple implementation
+          taskCard = createTaskCard(task);
+        }
+        
+        if (taskCard) {
+          tasksContainer.appendChild(taskCard);
+        }
+      } catch (cardError) {
+        console.error("Error creating task card:", cardError, task);
+        // Create basic fallback card on error
+        const basicCard = createBasicTaskCard(task);
+        tasksContainer.appendChild(basicCard);
+      }
     }
     
     // Update load more button if needed
     updateLoadMoreButton(endIndex < state.filteredTasks.length);
   }
   
-  // Create task card element
+  // Create task card element - simple fallback
   function createTaskCard(task) {
     const card = document.createElement('div');
     card.className = 'bg-white rounded-lg shadow-sm overflow-hidden task-card';
@@ -869,6 +943,18 @@
       </div>
     `;
     
+    return card;
+  }
+  
+  // Create a very basic task card as ultimate fallback
+  function createBasicTaskCard(task) {
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-lg shadow-sm overflow-hidden task-card p-4';
+    card.innerHTML = `
+      <h3 class="font-semibold">${task.title || 'Untitled Task'}</h3>
+      <p class="text-sm text-gray-500 mt-2">${task.description?.substring(0, 100) || 'No description'}</p>
+      <a href="task-detail.html?id=${task._id || task.id}" class="text-primary block mt-3">View Details</a>
+    `;
     return card;
   }
   
