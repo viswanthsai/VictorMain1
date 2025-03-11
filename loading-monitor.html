@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connection Diagnostics - Victor</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Config script -->
+  <script src="js/config.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+  <div class="container mx-auto px-4 py-8">
+    <div class="max-w-3xl mx-auto">
+      <div class="flex items-center mb-8">
+        <a href="index.html" class="text-primary font-bold text-2xl flex items-center">
+          <span class="bg-gradient-to-r from-primary to-blue-600 text-white p-1.5 rounded mr-1.5 flex items-center justify-center w-8 h-8">V</span>ictor
+        </a>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm p-8">
+        <h1 class="text-2xl font-bold mb-6">Connection Diagnostics</h1>
+        
+        <div class="mb-6 p-4 bg-blue-50 rounded-lg">
+          <p class="text-blue-700">This page helps diagnose API connection issues that might prevent loading tasks or other content.</p>
+        </div>
+        
+        <div class="mb-8">
+          <h2 class="text-lg font-semibold mb-3">System Information</h2>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="bg-gray-50 p-3 rounded-lg">
+              <p class="text-sm text-gray-500 mb-1">Device Type</p>
+              <p class="font-medium" id="device-type">Loading...</p>
+            </div>
+            <div class="bg-gray-50 p-3 rounded-lg">
+              <p class="text-sm text-gray-500 mb-1">Browser</p>
+              <p class="font-medium" id="browser-info">Loading...</p>
+            </div>
+            <div class="bg-gray-50 p-3 rounded-lg">
+              <p class="text-sm text-gray-500 mb-1">API URL</p>
+              <p class="font-medium truncate" id="api-url">Loading...</p>
+            </div>
+            <div class="bg-gray-50 p-3 rounded-lg">
+              <p class="text-sm text-gray-500 mb-1">Network Status</p>
+              <p class="font-medium" id="network-status">Loading...</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-8">
+          <h2 class="text-lg font-semibold mb-3">API Connectivity Tests</h2>
+          <div class="space-y-4" id="connectivity-tests">
+            <div class="flex items-center">
+              <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center mr-3">
+                <i class="fas fa-spinner fa-spin text-gray-500 text-sm"></i>
+              </div>
+              <span>Running tests...</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-8 pt-6 border-t border-gray-100">
+          <h2 class="text-lg font-semibold mb-3">Recommendations</h2>
+          <div id="recommendations" class="space-y-3">
+            <p class="text-gray-500">Analyzing your connection...</p>
+          </div>
+          
+          <div class="mt-6 flex flex-wrap gap-3">
+            <button id="reset-api-btn" class="bg-primary hover:bg-primary-dark text-white py-2 px-4 rounded-lg">
+              Reset API URL
+            </button>
+            <button id="test-task-btn" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg">
+              Test Task Loading
+            </button>
+            <button id="refresh-btn" class="border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50">
+              <i class="fas fa-sync mr-1"></i> Refresh Tests
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Populate system information
+      populateSystemInfo();
+      
+      // Run connectivity tests
+      runConnectivityTests();
+      
+      // Set up button actions
+      document.getElementById('reset-api-btn').addEventListener('click', function() {
+        localStorage.removeItem('apiUrl');
+        alert('API URL preference has been reset. The page will reload.');
+        window.location.reload();
+      });
+      
+      document.getElementById('test-task-btn').addEventListener('click', function() {
+        window.location.href = 'tasks.html';
+      });
+      
+      document.getElementById('refresh-btn').addEventListener('click', function() {
+        window.location.reload();
+      });
+    });
+    
+    // Populate system information
+    function populateSystemInfo() {
+      // Detect device type
+      const deviceType = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+        ? 'Mobile' 
+        : 'Desktop';
+      document.getElementById('device-type').textContent = deviceType;
+      
+      // Detect browser
+      const browser = detectBrowser();
+      document.getElementById('browser-info').textContent = browser;
+      
+      // Show API URL
+      const apiUrl = localStorage.getItem('apiUrl') || 
+                     (window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000');
+      document.getElementById('api-url').textContent = apiUrl;
+      
+      // Show network status
+      document.getElementById('network-status').textContent = navigator.onLine ? 'Online' : 'Offline';
+    }
+    
+    // Detect browser
+    function detectBrowser() {
+      const userAgent = navigator.userAgent;
+      let browserName;
+      
+      if (userAgent.match(/chrome|chromium|crios/i)) {
+        browserName = "Chrome";
+      } else if (userAgent.match(/firefox|fxios/i)) {
+        browserName = "Firefox";
+      } else if (userAgent.match(/safari/i)) {
+        browserName = "Safari";
+      } else if (userAgent.match(/opr\//i)) {
+        browserName = "Opera";
+      } else if (userAgent.match(/edg/i)) {
+        browserName = "Edge";
+      } else {
+        browserName = "Unknown";
+      }
+      
+      return `${browserName} ${navigator.appVersion.split(' ').pop()}`;
+    }
+    
+    // Run connectivity tests
+    async function runConnectivityTests() {
+      const testsContainer = document.getElementById('connectivity-tests');
+      testsContainer.innerHTML = '';
+      
+      // Test APIs
+      const apiUrl = localStorage.getItem('apiUrl') || 
+                    (window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000');
+      const backupApiUrl = window.API_CONFIG ? window.API_CONFIG.BACKUP_API_URL : null;
+      
+      // Test main API
+      const mainApiSuccess = await testApiEndpoint(apiUrl);
+      addTestResult(testsContainer, 'Main API', apiUrl, mainApiSuccess);
+      
+      // Test backup API if available
+      if (backupApiUrl) {
+        const backupApiSuccess = await testApiEndpoint(backupApiUrl);
+        addTestResult(testsContainer, 'Backup API', backupApiUrl, backupApiSuccess);
+      }
+      
+      // Test internet connectivity
+      const internetSuccess = navigator.onLine && await testApiEndpoint('https://www.google.com');
+      addTestResult(testsContainer, 'Internet Connectivity', 'Network check', internetSuccess);
+      
+      // Update recommendations
+      updateRecommendations(mainApiSuccess, backupApiUrl ? await testApiEndpoint(backupApiUrl) : false, internetSuccess);
+    }
+    
+    // Test if an API endpoint is reachable
+    async function testApiEndpoint(url) {
+      try {
+        // Make sure URL is properly formatted for fetch
+        if (!url.startsWith('http')) {
+          url = 'http://' + url;
+        }
+        
+        // Try to fetch a test endpoint or just the root
+        const testUrl = url.includes('google.com') ? url : `${url}/api/status`;
+        
+        const response = await fetch(testUrl, {
+          method: 'GET',
+          mode: 'no-cors', // This allows checking if external sites are reachable
+          cache: 'no-store',
+          timeout: 5000
+        });
+        
+        return true;
+      } catch (error) {
+        console.error(`Failed to connect to ${url}:`, error);
+        return false;
+      }
+    }
+    
+    // Add test result to UI
+    function addTestResult(container, name, url, success) {
+      const resultDiv = document.createElement('div');
+      resultDiv.className = 'p-3 rounded-lg ' + (success ? 'bg-green-50' : 'bg-red-50');
+      
+      resultDiv.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <div class="w-6 h-6 rounded-full ${success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} flex items-center justify-center mr-3">
+              <i class="fas ${success ? 'fa-check' : 'fa-times'} text-sm"></i>
+            </div>
+            <div>
+              <p class="font-medium">${name}</p>
+              <p class="text-sm text-gray-500 truncate">${url}</p>
+            </div>
+          </div>
+          <span class="${success ? 'text-green-700' : 'text-red-700'} text-sm font-medium">
+            ${success ? 'Success' : 'Failed'}
+          </span>
+        </div>
+      `;
+      
+      container.appendChild(resultDiv);
+    }
+    
+    // Update recommendations based on test results
+    function updateRecommendations(mainApiSuccess, backupApiSuccess, internetSuccess) {
+      const recommendationsDiv = document.getElementById('recommendations');
+      recommendationsDiv.innerHTML = '';
+      
+      if (!internetSuccess) {
+        addRecommendation(recommendationsDiv, 'Error', 'No internet connectivity detected. Please check your network connection.');
+        return;
+      }
+      
+      if (mainApiSuccess) {
+        addRecommendation(recommendationsDiv, 'Success', 'Main API is working correctly. You should be able to load tasks without issues.');
+      } else if (backupApiSuccess) {
+        addRecommendation(recommendationsDiv, 'Warning', 'Main API is down, but backup API is working. The application will use the backup API.');
+      } else {
+        addRecommendation(recommendationsDiv, 'Error', 'Both APIs are unreachable. Please contact support or try again later.');
+        
+        // Add more detailed troubleshooting steps
+        addRecommendation(recommendationsDiv, 'Tip', 'If you\'re using a mobile network, try connecting to WiFi.');
+        addRecommendation(recommendationsDiv, 'Tip', 'If you\'re on a corporate or school network, there might be firewall restrictions.');
+        addRecommendation(recommendationsDiv, 'Tip', 'Try clearing your browser cache and cookies.');
+      }
+    }
+    
+    // Add a recommendation to the UI
+    function addRecommendation(container, type, text) {
+      const icons = {
+        'Success': '<i class="fas fa-check-circle text-green-500 mr-2"></i>',
+        'Warning': '<i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>',
+        'Error': '<i class="fas fa-exclamation-circle text-red-500 mr-2"></i>',
+        'Tip': '<i class="fas fa-lightbulb text-blue-500 mr-2"></i>'
+      };
+      
+      const div = document.createElement('div');
+      div.className = 'flex items-start';
+      div.innerHTML = `
+        ${icons[type] || ''}
+        <span>${text}</span>
+      `;
+      
+      container.appendChild(div);
+    }
+  </script>
+</body>
+</html>

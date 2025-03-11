@@ -3,20 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Messages | Victor</title>
+    <title>Messages - Victor</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Config script -->
+    <!-- Add these scripts before other scripts -->
+    <script src="js/network-checker.js"></script>
     <script src="js/config.js"></script>
-    <script src="js/notification.js"></script>
+    <script src="js/error-handler.js"></script>
     <script src="js/user-display.js"></script>
-    <!-- Chat specific styles -->
-    <link rel="stylesheet" href="css/chat.css">
-    <!-- Configure Tailwind -->
+    <script src="js/chat-notifications.js"></script>
+    <script src="js/chat-system.js"></script>
+    <script src="js/chat-integration.js"></script>
+    
     <script>
         tailwind.config = {
             theme: {
@@ -39,8 +41,29 @@
             }
         }
     </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .chat-row {
+            transition: all 0.3s ease;
+        }
+        .chat-row:hover {
+            background-color: rgba(26, 115, 232, 0.05);
+        }
+        .chat-unread {
+            font-weight: 600;
+        }
+        .chat-unread .chat-last-message {
+            color: #1a1a1a;
+        }
+        .chat-row.active {
+            background-color: rgba(26, 115, 232, 0.1);
+            border-left: 3px solid #1a73e8;
+        }
+    </style>
 </head>
-<body class="bg-gray-50 flex flex-col min-h-screen font-sans">
+<body class="bg-gray-50 min-h-screen font-sans">
     <!-- Header -->
     <header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-50">
         <div class="container mx-auto px-4">
@@ -52,17 +75,12 @@
                 <!-- Search bar - desktop -->
                 <div class="hidden md:flex flex-grow max-w-xl mx-8">
                     <div class="relative w-full">
-                        <input type="text" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
+                        <input type="text" placeholder="Search messages..." id="search-input" class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i class="fas fa-search text-gray-400"></i>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Mobile menu button -->
-                <button class="md:hidden text-gray-600 focus:outline-none" id="mobile-menu-button">
-                    <i class="fas fa-bars text-xl"></i>
-                </button>
                 
                 <!-- Desktop nav menu -->
                 <nav class="hidden md:flex items-center space-x-1">
@@ -70,32 +88,8 @@
                     <a href="tasks.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Browse Tasks</a>
                     <a href="post-task.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Post a Task</a>
                     
-                    <!-- Notifications dropdown -->
-                    <div class="relative">
-                        <button class="p-2 text-gray-600 hover:text-primary rounded-full hover:bg-gray-100 relative" id="notification-button">
-                            <i class="fas fa-bell"></i>
-                            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full" id="notifications-count" style="display: none;">0</span>
-                        </button>
-                        <div class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg py-1 z-10 hidden border border-gray-100" id="notifications-dropdown">
-                            <div class="px-4 py-3 border-b border-gray-100">
-                                <h3 class="font-semibold text-gray-900">Notifications</h3>
-                            </div>
-                            <div class="max-h-64 overflow-y-auto">
-                                <!-- Notifications will be inserted here -->
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Messages dropdown -->
-                    <div class="relative">
-                        <a href="messages.html" class="p-2 text-primary hover:text-primary-dark rounded-full hover:bg-gray-100 relative">
-                            <i class="fas fa-envelope"></i>
-                            <span class="absolute top-0 right-0 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full" id="chat-count" style="display: none;">0</span>
-                        </a>
-                    </div>
-                    
                     <!-- User dropdown -->
-                    <div class="relative" id="user-menu-item">
+                    <div class="relative" id="user-menu-container">
                         <button class="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-full transition-colors" id="user-menu-button">
                             <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-400 to-blue-500 text-white flex items-center justify-center font-bold mr-2" id="user-avatar">V</div>
                             <span class="font-medium mr-1" id="username-display">User</span>
@@ -112,404 +106,508 @@
                             <a href="profile.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
                                 <i class="fas fa-user-circle w-5 text-gray-400 mr-2"></i> My Profile
                             </a>
-                            <a href="accepted-tasks.html" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
-                                <i class="fas fa-check-circle w-5 text-gray-400 mr-2"></i> Tasks I'm Working On
-                            </a>
                             <div class="border-t border-gray-100 my-1"></div>
                             <a href="#" id="logout-button" class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-50">
                                 <i class="fas fa-sign-out-alt w-5 text-gray-400 mr-2"></i> Logout
                             </a>
                         </div>
                     </div>
-                    
-                    <!-- Login/Signup options (visible when logged out) -->
-                    <div class="flex items-center space-x-2" id="auth-buttons">
-                        <a class="px-4 py-2 text-gray-700 font-medium hover:text-primary transition-colors" href="login.html" id="login-menu-item">
-                            Log In
-                        </a>
-                        <a class="px-4 py-2 bg-primary hover:bg-primary-dark text-white font-medium rounded-md transition-colors" href="signup.html" id="signup-menu-item">
-                            Sign Up
-                        </a>
-                    </div>
                 </nav>
             </div>
         </div>
-        
-        <!-- Mobile menu (hidden by default) -->
-        <div class="md:hidden bg-white border-t border-gray-100 px-4 py-2 hidden" id="mobile-menu">
-            <!-- Mobile search -->
-            <div class="relative mb-4">
-                <input type="text" placeholder="Search tasks..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i class="fas fa-search text-gray-400"></i>
-                </div>
-            </div>
-            <!-- Mobile nav menu -->
-            <nav class="space-y-1">
-                <a href="index.html" class="block px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Home</a>
-                <a href="tasks.html" class="block px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Browse Tasks</a>
-                <a href="post-task.html" class="block px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Post a Task</a>
-            </nav>
-        </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="container mx-auto px-4 py-8 flex-grow mt-16">
-        <div class="max-w-5xl mx-auto">
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">My Messages</h1>
-                <button id="refresh-chats" class="text-blue-500 hover:text-blue-700">
-                    <i class="fas fa-sync-alt"></i> Refresh
-                </button>
+    <main class="pt-16 flex h-screen">
+        <!-- Sidebar with chats list -->
+        <div class="w-full md:w-80 lg:w-96 bg-white border-r border-gray-200 overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-gray-200">
+                <h1 class="text-xl font-semibold">Messages</h1>
             </div>
-
-            <!-- Messages list -->
-            <div class="bg-white rounded-lg shadow-sm p-0">
-                <div id="messages-list" class="min-h-[300px]">
-                    <div class="py-20 text-center text-gray-500">
-                        <i class="fas fa-spinner fa-spin text-3xl"></i>
-                        <p class="mt-2">Loading conversations...</p>
+            
+            <!-- Search box -->
+            <div class="p-4 border-b border-gray-100">
+                <div class="relative">
+                    <input type="text" id="chat-search" placeholder="Search messages..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-gray-400"></i>
                     </div>
                 </div>
-
-                <!-- Empty state -->
-                <div id="empty-state" class="hidden py-16 text-center">
-                    <div class="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <i class="fas fa-comments text-gray-400 text-2xl"></i>
+            </div>
+            
+            <!-- Chats list with loading state -->
+            <div id="chats-loading" class="flex-grow flex items-center justify-center">
+                <div class="flex flex-col items-center">
+                    <div class="w-8 h-8 border-t-2 border-b-2 border-primary rounded-full animate-spin mb-3"></div>
+                    <p class="text-gray-500 text-sm">Loading conversations...</p>
+                </div>
+            </div>
+            
+            <!-- Chats list container -->
+            <div id="chats-list" class="flex-grow overflow-y-auto hidden">
+                <!-- Chats will be added here dynamically -->
+            </div>
+            
+            <!-- Empty state -->
+            <div id="no-chats-message" class="flex-grow flex items-center justify-center p-4 text-center hidden">
+                <div>
+                    <div class="bg-gray-50 rounded-full p-6 mx-auto mb-4 w-20 h-20 flex items-center justify-center">
+                        <i class="fas fa-comments text-gray-300 text-3xl"></i>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-700">No messages yet</h3>
-                    <p class="text-gray-500 mt-2 max-w-md mx-auto">
-                        When you communicate with task posters or workers, your conversations will appear here.
-                    </p>
-                    <div class="mt-6">
-                        <a href="browse.html" class="bg-primary hover:bg-primary-dark text-white py-2 px-6 rounded-lg transition-colors">
-                            Browse Tasks
-                        </a>
+                    <h3 class="font-medium mb-1">No messages yet</h3>
+                    <p class="text-gray-500 text-sm">When you connect with others, your conversations will appear here.</p>
+                </div>
+            </div>
+            
+            <!-- Error state -->
+            <div id="chats-error" class="flex-grow flex items-center justify-center p-4 text-center hidden">
+                <div>
+                    <div class="bg-red-50 rounded-full p-6 mx-auto mb-4 w-20 h-20 flex items-center justify-center">
+                        <i class="fas fa-exclamation-circle text-red-400 text-3xl"></i>
                     </div>
+                    <h3 class="font-medium mb-1">Couldn't load messages</h3>
+                    <p class="text-gray-500 text-sm" id="chats-error-message">Please check your connection and try again.</p>
+                    <button id="retry-chats" class="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>Try Again
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main chat area -->
+        <div class="hidden md:flex flex-col flex-grow bg-gray-50 overflow-hidden" id="chat-container">
+            <!-- Empty state when no chat is selected -->
+            <div class="flex-grow flex items-center justify-center p-4" id="no-chat-selected">
+                <div class="text-center max-w-md">
+                    <div class="bg-gray-100 rounded-full p-8 mx-auto mb-6 w-28 h-28 flex items-center justify-center">
+                        <i class="fas fa-comments text-gray-300 text-4xl"></i>
+                    </div>
+                    <h2 class="text-xl font-semibold mb-2">Select a conversation</h2>
+                    <p class="text-gray-500">Choose a conversation from the list or start a new one.</p>
+                </div>
+            </div>
+            
+            <!-- Loading state -->
+            <div id="chat-loading" class="flex-grow flex items-center justify-center hidden">
+                <div class="flex flex-col items-center">
+                    <div class="w-10 h-10 border-t-2 border-b-2 border-primary rounded-full animate-spin mb-3"></div>
+                    <p class="text-gray-500">Loading messages...</p>
+                </div>
+            </div>
+            
+            <!-- Error state -->
+            <div id="chat-error" class="flex-grow flex items-center justify-center hidden">
+                <div class="text-center">
+                    <div class="bg-red-50 rounded-full p-6 mx-auto mb-4 w-20 h-20 flex items-center justify-center">
+                        <i class="fas fa-exclamation-circle text-red-400 text-3xl"></i>
+                    </div>
+                    <h3 class="font-medium mb-1">Something went wrong</h3>
+                    <p class="text-gray-500" id="chat-error-message">We couldn't load this conversation.</p>
+                    <button id="retry-chat" class="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>Try Again
+                    </button>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-white mt-auto border-t border-gray-200">
-        <div class="container mx-auto px-4 py-6">
-            <div class="flex flex-col md:flex-row justify-between items-center">
-                <div class="text-center md:text-left mb-4 md:mb-0">
-                    <a href="index.html" class="text-xl font-bold text-primary">
-                        <i class="fas fa-hands-helping mr-1"></i> Victor
-                    </a>
-                    <p class="text-sm text-gray-500 mt-1">Connect with helpers in your community</p>
-                </div>
-                <div class="flex space-x-6">
-                    <a href="about.html" class="text-sm text-gray-600 hover:text-primary transition-colors">About</a>
-                    <a href="contact.html" class="text-sm text-gray-600 hover:text-primary transition-colors">Contact</a>
-                    <a href="privacy.html" class="text-sm text-gray-600 hover:text-primary transition-colors">Privacy</a>
-                    <a href="terms.html" class="text-sm text-gray-600 hover:text-primary transition-colors">Terms</a>
-                </div>
-            </div>
-            <div class="text-center text-sm text-gray-500 mt-6">
-                &copy; 2023 Victor. All rights reserved.
-            </div>
-        </div>
-    </footer>
-
-    <!-- Scripts -->
-    <script src="js/main.js"></script>
-    <script src="js/chat-system.js"></script>
-    <!-- Chat system notifications -->
-    <script src="js/chat-notifications.js"></script>
     <script>
-        // Document ready
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('Messages page loaded');
+            
             // Check if user is logged in
-            const isLoggedIn = localStorage.getItem('token') !== null;
-            if (!isLoggedIn) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                // Redirect to login
                 window.location.href = 'login.html?redirect=messages.html';
                 return;
             }
             
-            // Load messages list
-            loadMessagesList();
+            // Load chats
+            loadChats();
+            
+            // Setup search
+            setupSearch();
+            
+            // Setup retry button
+            document.getElementById('retry-chats').addEventListener('click', loadChats);
+            document.getElementById('retry-chat')?.addEventListener('click', function() {
+                const activeChatId = document.querySelector('.chat-row.active')?.getAttribute('data-chat-id');
+                if (activeChatId) {
+                    loadChatMessages(activeChatId);
+                }
+            });
 
-            // Setup notification dropdown
-            const notificationButton = document.getElementById('notification-button');
-            const notificationsDropdown = document.getElementById('notifications-dropdown');
+            // Setup user dropdown
+            setupUserDropdown();
             
-            if (notificationButton && notificationsDropdown) {
-                notificationButton.addEventListener('click', function() {
-                    notificationsDropdown.classList.toggle('hidden');
-                });
-                
-                // Close dropdown when clicking outside
-                document.addEventListener('click', function(event) {
-                    if (!notificationButton.contains(event.target) && !notificationsDropdown.contains(event.target)) {
-                        notificationsDropdown.classList.add('hidden');
-                    }
-                });
-            }
-            
-            // Setup refresh button
-            const refreshButton = document.getElementById('refresh-chats');
-            if (refreshButton) {
-                refreshButton.addEventListener('click', function() {
-                    loadMessagesList();
-                });
-            }
+            // Update user display
+            updateUserDisplay();
         });
-
-        // Load messages list
-        async function loadMessagesList() {
-            const messagesListContainer = document.getElementById('messages-list');
-            const emptyStateContainer = document.getElementById('empty-state');
-            const loadingContainer = document.getElementById('loading-container');
-            
+        
+        // Global state
+        const state = {
+            chats: [],
+            filteredChats: [],
+            selectedChatId: null
+        };
+        
+        /**
+         * Load chats list
+         */
+        async function loadChats() {
             try {
                 // Show loading state
-                if (messagesListContainer) {
-                    messagesListContainer.innerHTML = `
-                        <div class="py-20 text-center text-gray-500">
-                            <i class="fas fa-spinner fa-spin text-3xl"></i>
-                            <p class="mt-2">Loading conversations...</p>
-                        </div>
-                    `;
-                }
+                document.getElementById('chats-loading').classList.remove('hidden');
+                document.getElementById('chats-list').classList.add('hidden');
+                document.getElementById('no-chats-message').classList.add('hidden');
+                document.getElementById('chats-error').classList.add('hidden');
                 
-                const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
-                const token = localStorage.getItem('token');
-                const userId = localStorage.getItem('userId');
+                // Get API URL
+                const apiUrl = window.getApiUrl ? window.getApiUrl() : 'http://localhost:9000';
                 
-                if (!token || !userId) {
-                    console.error("User not logged in");
-                    if (messagesListContainer) messagesListContainer.classList.add('hidden');
-                    if (emptyStateContainer) emptyStateContainer.classList.remove('hidden');
-                    return;
-                }
-                
-                // Fetch all chats for the current user
-                const chatsResponse = await fetch(`${API_URL}/api/chats`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                // Fetch chats
+                const response = await fetch(`${apiUrl}/api/chats`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
                 });
                 
-                if (!chatsResponse.ok) {
-                    throw new Error(`Failed to fetch chats: ${chatsResponse.status}`);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch chats: ${response.status}`);
                 }
                 
-                const chats = await chatsResponse.json();
-                console.log('Fetched chats:', chats);
+                // Get chats data
+                const chats = await response.json();
+                console.log('Loaded chats:', chats);
                 
-                // Handle empty chats list
-                if (!chats || chats.length === 0) {
-                    console.log("No chats found");
-                    if (messagesListContainer) messagesListContainer.classList.add('hidden');
-                    if (emptyStateContainer) emptyStateContainer.classList.remove('hidden');
-                    return;
-                }
+                // Store chats in state
+                state.chats = chats;
+                state.filteredChats = chats;
                 
-                // Process each chat to get the messages and other user info
-                const processedChats = [];
-                for (const chat of chats) {
-                    try {
-                        // Get messages for this chat
-                        const messagesResponse = await fetch(`${API_URL}/api/chats/${chat._id || chat.id}/messages`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-                        
-                        if (!messagesResponse.ok) {
-                            console.error(`Failed to fetch messages for chat ${chat._id || chat.id}`);
-                            continue;
-                        }
-                        
-                        const messages = await messagesResponse.json();
-                        console.log(`Messages for chat ${chat._id || chat.id}:`, messages);
-                        
-                        // Find the other participant in the chat
-                        let otherUserId = null;
-                        let otherUserName = 'User';
-                        
-                        // First try to get from chat participants
-                        if (chat.participants && Array.isArray(chat.participants)) {
-                            otherUserId = chat.participants.find(id => id !== userId);
-                        }
-                        
-                        // If no messages or other user not found yet, skip this chat
-                        if (!messages || messages.length === 0) {
-                            continue;
-                        }
-                        
-                        // Try to get from messages if not found from participants
-                        if (!otherUserId) {
-                            // Look through messages to find the other user
-                            for (const msg of messages) {
-                                if (msg.senderId === userId && msg.recipientId) {
-                                    otherUserId = msg.recipientId;
-                                    otherUserName = msg.recipientName || 'User';
-                                    break;
-                                } else if (msg.recipientId === userId && msg.senderId) {
-                                    otherUserId = msg.senderId;
-                                    otherUserName = msg.senderName || 'User';
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        // Get task details
-                        let taskTitle = 'Task';
-                        const taskId = messages[0].taskId;
-                        
-                        if (messages[0].taskTitle) {
-                            taskTitle = messages[0].taskTitle;
-                        } else if (taskId) {
-                            try {
-                                const taskResponse = await fetch(`${API_URL}/api/tasks/${taskId}`, {
-                                    headers: { 'Authorization': `Bearer ${token}` }
-                                });
-                                
-                                if (taskResponse.ok) {
-                                    const taskData = await taskResponse.json();
-                                    taskTitle = taskData.title || 'Task';
-                                }
-                            } catch (error) {
-                                console.error('Error fetching task details:', error);
-                            }
-                        }
-                        
-                        // Get latest message
-                        const latestMessage = messages[messages.length - 1];
-                        
-                        // Add processed chat to array
-                        processedChats.push({
-                            id: chat._id || chat.id,
-                            otherUser: {
-                                id: otherUserId,
-                                name: otherUserName
-                            },
-                            taskId: taskId,
-                            taskTitle: taskTitle,
-                            lastMessage: {
-                                text: latestMessage.content || "No message content",
-                                timestamp: latestMessage.createdAt || chat.updatedAt || chat.createdAt,
-                                senderId: latestMessage.senderId,
-                                read: latestMessage.read || false
-                            }
-                        });
-                    } catch (error) {
-                        console.error(`Error processing chat ${chat._id || chat.id}:`, error);
-                    }
-                }
-                
-                // Sort chats by latest message time
-                processedChats.sort((a, b) => {
-                    const timeA = new Date(a.lastMessage.timestamp);
-                    const timeB = new Date(b.lastMessage.timestamp);
-                    return timeB - timeA;
-                });
-                
-                // Show the chats
-                if (processedChats.length > 0) {
-                    if (messagesListContainer) {
-                        messagesListContainer.classList.remove('hidden');
-                        messagesListContainer.innerHTML = '';
-                        
-                        processedChats.forEach(chat => {
-                            const date = new Date(chat.lastMessage.timestamp);
-                            const isUnread = chat.lastMessage.senderId !== userId && !chat.lastMessage.read;
-                            
-                            const chatElement = document.createElement('a');
-                            chatElement.href = `chat.html?id=${chat.id}`;
-                            chatElement.className = `block border-b border-gray-100 last:border-b-0 ${isUnread ? 'bg-blue-50' : ''}`;
-                            
-                            chatElement.innerHTML = `
-                                <div class="px-6 py-4 hover:bg-gray-50 transition-colors">
-                                    <div class="flex items-start">
-                                        <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-400 to-indigo-500 text-white flex items-center justify-center font-bold text-lg mr-4">
-                                            ${chat.otherUser.name.charAt(0).toUpperCase()}
-                                        </div>
-                                        <div class="flex-grow">
-                                            <div class="flex justify-between">
-                                                <h3 class="font-semibold text-gray-900">${chat.otherUser.name}</h3>
-                                                <span class="text-xs text-gray-500">${formatChatTime(date)}</span>
-                                            </div>
-                                            <p class="text-sm ${isUnread ? 'font-semibold text-gray-800' : 'text-gray-600'} truncate mt-1">
-                                                ${chat.lastMessage.text}
-                                            </p>
-                                            <div class="flex justify-between items-center mt-2">
-                                                <span class="text-xs text-gray-500">Task: ${chat.taskTitle}</span>
-                                                ${isUnread ? `
-                                                    <span class="bg-primary text-white text-xs rounded-full px-2 py-0.5">
-                                                        New
-                                                    </span>
-                                                ` : ''}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                            
-                            messagesListContainer.appendChild(chatElement);
-                        });
-                    }
-                    
-                    if (emptyStateContainer) {
-                        emptyStateContainer.classList.add('hidden');
-                    }
-                } else {
-                    if (messagesListContainer) {
-                        messagesListContainer.classList.add('hidden');
-                    }
-                    
-                    if (emptyStateContainer) {
-                        emptyStateContainer.classList.remove('hidden');
-                    }
-                }
+                // Display chats
+                displayChats(chats);
             } catch (error) {
-                console.error('Error loading messages list:', error);
+                console.error('Error loading chats:', error);
                 
-                if (messagesListContainer) {
-                    messagesListContainer.innerHTML = `
-                        <div class="py-12 text-center">
-                            <div class="text-red-500 mb-3"><i class="fas fa-exclamation-circle text-xl"></i></div>
-                            <p class="text-gray-700">Failed to load conversations</p>
-                            <button id="retry-button" class="mt-4 text-primary hover:underline">Try again</button>
-                        </div>
-                    `;
+                // Show error message
+                document.getElementById('chats-loading').classList.add('hidden');
+                document.getElementById('chats-list').classList.add('hidden');
+                document.getElementById('no-chats-message').classList.add('hidden');
+                document.getElementById('chats-error').classList.remove('hidden');
+                document.getElementById('chats-error-message').textContent = error.message || 'Could not load conversations.';
+            }
+        }
+        
+        /**
+         * Display chats list
+         */
+        async function displayChats(chats) {
+            const chatsContainer = document.getElementById('chats-list');
+            
+            if (!chatsContainer) return;
+            
+            // Hide loading state
+            document.getElementById('chats-loading').classList.add('hidden');
+            
+            if (!chats || chats.length === 0) {
+                // Show empty state
+                document.getElementById('no-chats-message').classList.remove('hidden');
+                chatsContainer.classList.add('hidden');
+                return;
+            }
+            
+            // Show chats container
+            chatsContainer.classList.remove('hidden');
+            document.getElementById('no-chats-message').classList.add('hidden');
+            
+            // Clear chats container
+            chatsContainer.innerHTML = '';
+            
+            // Sort chats by updated time
+            const sortedChats = chats
+                .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
+            
+            // Get current user ID
+            const currentUserId = localStorage.getItem('userId');
+            
+            // Get task titles and user names for each chat
+            const apiUrl = window.getApiUrl ? window.getApiUrl() : 'http://localhost:9000';
+            
+            // Process each chat
+            for (const chat of sortedChats) {
+                try {
+                    // Get more info for this chat
+                    const chatInfoResponse = await fetch(`${apiUrl}/api/chats/${chat._id || chat.id}`, {
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        }
+                    });
                     
-                    const retryButton = document.getElementById('retry-button');
-                    if (retryButton) {
-                        retryButton.addEventListener('click', () => loadMessagesList());
+                    if (!chatInfoResponse.ok) {
+                        console.warn(`Failed to get info for chat ${chat._id || chat.id}`);
+                        continue;
                     }
+                    
+                    const chatInfo = await chatInfoResponse.json();
+                    console.log('Chat info:', chatInfo);
+                    
+                    // Create chat row with user name
+                    const chatRow = createChatRow(chat, chatInfo);
+                    chatsContainer.appendChild(chatRow);
+                    
+                } catch (error) {
+                    console.error(`Error processing chat ${chat._id || chat.id}:`, error);
                 }
             }
         }
         
-        // Helper function to format chat time
-        function formatChatTime(timestamp) {
-            const now = new Date();
-            const messageDate = new Date(timestamp);
+        /**
+         * Create a chat row element
+         */
+        function createChatRow(chat, chatInfo) {
+            const chatRow = document.createElement('div');
+            chatRow.className = 'chat-row p-4 border-b border-gray-100 cursor-pointer';
+            chatRow.setAttribute('data-chat-id', chat._id || chat.id);
             
-            // Same day
-            if (messageDate.toDateString() === now.toDateString()) {
-                return messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            // Get last message if available
+            let lastMessageText = 'No messages yet';
+            let lastMessageTime = '';
+            let hasUnread = false;
+            let senderName = '';
+            
+            if (chat.lastMessage) {
+                lastMessageText = chat.lastMessage.content;
+                lastMessageTime = formatTime(chat.lastMessage.timestamp || chat.updatedAt || chat.createdAt);
+                
+                // Check if the message is from another user
+                const currentUserId = localStorage.getItem('userId');
+                if (chat.lastMessage.senderId !== currentUserId) {
+                    senderName = chatInfo.otherUser?.name || 'User';
+                }
+                
+                // Check if there are unread messages
+                if (chat.unreadCount && Object.values(chat.unreadCount).some(count => count > 0)) {
+                    hasUnread = true;
+                    chatRow.classList.add('chat-unread');
+                }
+            } else {
+                lastMessageTime = formatTime(chat.updatedAt || chat.createdAt);
             }
             
-            // Yesterday
-            const yesterday = new Date(now);
-            yesterday.setDate(now.getDate() - 1);
-            if (messageDate.toDateString() === yesterday.toDateString()) {
-                return 'Yesterday';
-            }
+            // Format the task title
+            const taskTitle = chatInfo.taskTitle || 'Conversation';
             
-            // Within a week
-            const oneWeek = 7 * 24 * 60 * 60 * 1000;
-            if ((now - messageDate) < oneWeek) {
-                const options = { weekday: 'short' };
-                return messageDate.toLocaleDateString(undefined, options);
-            }
+            // Get the other user's name
+            const otherUserName = chatInfo.otherUser?.name || 'User';
             
-            // Older
-            const options = { month: 'short', day: 'numeric' };
-            return messageDate.toLocaleDateString(undefined, options);
+            // Add chat info
+            chatRow.innerHTML = `
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center mr-3">
+                        ${otherUserName.charAt(0).toUpperCase()}
+                    </div>
+                    <div class="flex-grow min-w-0">
+                        <div class="flex justify-between">
+                            <h4 class="font-medium truncate">${otherUserName}</h4>
+                            <span class="text-xs text-gray-500 ml-2">${lastMessageTime}</span>
+                        </div>
+                        <p class="text-gray-500 text-sm truncate">
+                            ${taskTitle !== 'Conversation' ? `<span class="font-medium text-gray-600">${taskTitle}:</span> ` : ''}
+                            ${senderName ? `<span class="text-gray-600">${senderName}:</span> ` : ''}
+                            ${lastMessageText}
+                        </p>
+                        ${hasUnread ? `
+                            <div class="mt-1">
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-primary text-white">
+                                    New
+                                </span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            // Add click event
+            chatRow.addEventListener('click', function() {
+                // Go to chat page
+                window.location.href = `chat.html?id=${chat._id || chat.id}`;
+            });
+            
+            return chatRow;
         }
+        
+        /**
+         * Format time
+         */
+        function formatTime(dateString) {
+            if (!dateString) return '';
+            
+            try {
+                const date = new Date(dateString);
+                const now = new Date();
+                const diff = (now - date) / 1000; // difference in seconds
+                
+                // If invalid date
+                if (isNaN(date.getTime())) return '';
+                
+                // Today, show time
+                if (diff < 86400 && date.getDate() === now.getDate()) {
+                    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+                
+                // Yesterday
+                const yesterday = new Date(now);
+                yesterday.setDate(now.getDate() - 1);
+                if (date.getDate() === yesterday.getDate() && 
+                    date.getMonth() === yesterday.getMonth() && 
+                    date.getFullYear() === yesterday.getFullYear()) {
+                    return 'Yesterday';
+                }
+                
+                // This week
+                if (diff < 604800) {
+                    return date.toLocaleDateString([], { weekday: 'short' });
+                }
+                
+                // Older
+                return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            } catch (error) {
+                console.error('Error formatting time:', error);
+                return '';
+            }
+        }
+        
+        /**
+         * Setup search functionality
+         */
+        function setupSearch() {
+            const searchInput = document.getElementById('chat-search');
+            if (!searchInput) return;
+            
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase().trim();
+                
+                if (!searchTerm) {
+                    // If search is empty, show all chats
+                    state.filteredChats = state.chats;
+                } else {
+                    // Filter chats by last message content and participants
+                    state.filteredChats = state.chats.filter(chat => {
+                        // Check if last message contains search term
+                        if (chat.lastMessage && chat.lastMessage.content && 
+                            chat.lastMessage.content.toLowerCase().includes(searchTerm)) {
+                            return true;
+                        }
+                        
+                        // Check if task title contains search term if available
+                        if (chat.taskTitle && chat.taskTitle.toLowerCase().includes(searchTerm)) {
+                            return true;
+                        }
+                        
+                        // More search criteria could be added here
+                        return false;
+                    });
+                }
+                
+                // Display filtered chats
+                displayChats(state.filteredChats);
+            });
+        }
+        
+        /**
+         * Update user display
+         */
+        function updateUserDisplay() {
+            // Use the global function from user-display.js if available
+            if (window.updateUserDisplay) {
+                window.updateUserDisplay();
+            } else {
+                // Fallback implementation
+                const username = localStorage.getItem('username') || 'User';
+                const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
+                
+                // Update username displays
+                const usernameDisplay = document.getElementById('username-display');
+                const userNameDropdown = document.getElementById('user-name-dropdown');
+                const userAvatar = document.getElementById('user-avatar');
+                
+                if (usernameDisplay) usernameDisplay.textContent = username;
+                if (userNameDropdown) userNameDropdown.textContent = username;
+                if (userAvatar) userAvatar.textContent = username.charAt(0).toUpperCase();
+                
+                // Update email display
+                const userEmailDropdown = document.getElementById('user-email-dropdown');
+                if (userEmailDropdown) userEmailDropdown.textContent = userEmail;
+            }
+        }
+        
+        /**
+         * Setup user dropdown
+         */
+        function setupUserDropdown() {
+            const userMenuButton = document.getElementById('user-menu-button');
+            const userDropdown = document.getElementById('user-dropdown');
+            const logoutButton = document.getElementById('logout-button');
+            
+            if (userMenuButton && userDropdown) {
+                userMenuButton.addEventListener('click', function() {
+                    userDropdown.classList.toggle('hidden');
+                });
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(event) {
+                    if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
+                        userDropdown.classList.add('hidden');
+                    }
+                });
+            }
+            
+            // Setup logout functionality
+            if (logoutButton) {
+                logoutButton.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    logout();
+                });
+            }
+        }
+        
+        /**
+         * Logout function
+         */
+        function logout() {
+            // Clear local storage
+            localStorage.removeItem('token');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('username');
+            localStorage.removeItem('userEmail');
+            
+            // Redirect to login page
+            window.location.href = 'login.html';
+        }
+    </script>
+    <script>
+        // Quick fix for missing username in messages page
+        (function() {
+            const username = localStorage.getItem('username');
+            const userEmail = localStorage.getItem('userEmail');
+            
+            if (username) {
+                const usernameDisplay = document.getElementById('username-display');
+                const userNameDropdown = document.getElementById('user-name-dropdown');
+                const userAvatar = document.getElementById('user-avatar');
+                
+                if (usernameDisplay) usernameDisplay.textContent = username;
+                if (userNameDropdown) userNameDropdown.textContent = username;
+                if (userAvatar) userAvatar.textContent = username.charAt(0).toUpperCase();
+            }
+            
+            if (userEmail) {
+                const userEmailDropdown = document.getElementById('user-email-dropdown');
+                if (userEmailDropdown) userEmailDropdown.textContent = userEmail;
+            }
+            
+            console.log('Username display updated to:', username);
+        })();
     </script>
 </body>
 </html>

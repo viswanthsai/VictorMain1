@@ -10,9 +10,10 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Config script -->
+  <!-- Add these scripts before other scripts -->
+  <script src="js/network-checker.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/notification.js"></script>
+  <script src="js/error-handler.js"></script>
   <script src="js/task-utils.js"></script>
   <script src="js/user-display.js"></script>
   <!-- Chat system notifications -->
@@ -474,597 +475,698 @@
   </footer>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Get API URL from config
-      const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
-      
-      // Mobile menu toggle
-      document.getElementById('mobile-menu-button').addEventListener('click', function() {
-        document.getElementById('mobile-menu').classList.toggle('hidden');
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('Tasks page loaded');
+    
+    // Check for stored API URL first
+    const storedApiUrl = localStorage.getItem('apiUrl');
+    if (storedApiUrl) {
+      console.log('Using stored API URL:', storedApiUrl);
+    }
+    
+    // Setup event listeners first
+    setupEventListeners();
+    
+    // Load tasks with better error handling
+    loadTasks();
+    
+    // Check login status
+    checkLoginStatus();
+    
+    // Setup dropdowns
+    setupUserDropdown();
+    setupNotificationsDropdown();
+  });
+  
+  // App state
+  const state = {
+    tasks: [],
+    filteredTasks: [],
+    currentPage: 1,
+    tasksPerPage: 12,
+    filters: {
+      search: '',
+      category: '',
+      location: '',
+      minBudget: '',
+      maxBudget: ''
+    },
+    sort: 'newest',
+    isLoading: false
+  };
+  
+  // Setup event listeners
+  function setupEventListeners() {
+    // Mobile menu toggle
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
+    
+    if (mobileMenuButton && mobileMenu) {
+      mobileMenuButton.addEventListener('click', function() {
+        mobileMenu.classList.toggle('hidden');
       });
-      
-      // Check if user is logged in
-      checkLoginStatus();
-      
-      // User dropdown toggle
-      setupUserDropdown();
-      
-      // Notifications dropdown toggle
-      setupNotificationsDropdown();
-      
-      // Load tasks
-      loadTasks();
-      
-      // Setup event listeners for filters
-      setupFilters();
-      
-      // Retry button
-      const retryButton = document.getElementById('retry-button');
-      if (retryButton) {
-        retryButton.addEventListener('click', loadTasks);
-      }
-      
-      // Reset filters button
-      const resetFiltersButton = document.getElementById('reset-filters');
-      if (resetFiltersButton) {
-        resetFiltersButton.addEventListener('click', resetFilters);
-      }
+    }
+    
+    // Search input
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', function() {
+        state.filters.search = this.value.toLowerCase();
+        state.currentPage = 1; // Reset to first page when filtering
+        filterAndDisplayTasks();
+      });
+    }
+    
+    // Category filter
+    const categoryFilter = document.getElementById('category-filter');
+    if (categoryFilter) {
+      categoryFilter.addEventListener('change', function() {
+        state.filters.category = this.value;
+        state.currentPage = 1;
+        filterAndDisplayTasks();
+      });
+    }
+    
+    // Location filter
+    const locationFilter = document.getElementById('location-filter');
+    if (locationFilter) {
+      locationFilter.addEventListener('change', function() {
+        state.filters.location = this.value;
+        state.currentPage = 1;
+        filterAndDisplayTasks();
+      });
+    }
+
+    // Budget filters
+    const minBudget = document.getElementById('min-budget');
+    if (minBudget) {
+      minBudget.addEventListener('change', function() {
+        state.filters.minBudget = this.value;
+        state.currentPage = 1;
+        filterAndDisplayTasks();
+      });
+    }
+    
+    const maxBudget = document.getElementById('max-budget');
+    if (maxBudget) {
+      maxBudget.addEventListener('change', function() {
+        state.filters.maxBudget = this.value;
+        state.currentPage = 1;
+        filterAndDisplayTasks();
+      });
+    }
+    
+    // Sort options
+    const sortOptions = document.getElementById('sort-options');
+    if (sortOptions) {
+      sortOptions.addEventListener('change', function() {
+        state.sort = this.value;
+        sortTasks();
+        displayTasks();
+      });
+    }
+    
+    // Location chips
+    const locationChips = document.querySelectorAll('.location-chip');
+    locationChips.forEach(chip => {
+      chip.addEventListener('click', function() {
+        const locationValue = this.getAttribute('data-location');
+        if (locationFilter) {
+          locationFilter.value = locationValue;
+          state.filters.location = locationValue;
+          state.currentPage = 1;
+          filterAndDisplayTasks();
+        }
+      });
     });
     
-    // Check login status and update UI accordingly
-    function checkLoginStatus() {
-      const token = localStorage.getItem('token');
-      const username = localStorage.getItem('username');
-      const userEmail = localStorage.getItem('userEmail');
-      
-      const authButtons = document.getElementById('auth-buttons');
-      const userMenuContainer = document.getElementById('user-menu-container');
-      const mobileAuthLinks = document.getElementById('mobile-auth-links');
-      const mobileUserLinks = document.getElementById('mobile-user-links');
-      
-      if (token) {
-        // User is logged in
-        if (authButtons) authButtons.classList.add('hidden');
-        if (userMenuContainer) userMenuContainer.classList.remove('hidden');
-        if (mobileAuthLinks) mobileAuthLinks.classList.add('hidden');
-        if (mobileUserLinks) mobileUserLinks.classList.remove('hidden');
-        
-        // Update user info
-        const usernameDisplay = document.getElementById('username-display');
-        const userNameDropdown = document.getElementById('user-name-dropdown');
-        const userEmailDropdown = document.getElementById('user-email-dropdown');
-        const userAvatar = document.getElementById('user-avatar');
-        
-        if (usernameDisplay && username) usernameDisplay.textContent = username;
-        if (userNameDropdown && username) userNameDropdown.textContent = username;
-        if (userEmailDropdown && userEmail) userEmailDropdown.textContent = userEmail;
-        if (userAvatar && username) userAvatar.textContent = username.charAt(0).toUpperCase();
-        
-        // Setup logout buttons
-        const logoutButton = document.getElementById('logout-button');
-        const mobileLogoutButton = document.getElementById('mobile-logout-button');
-        
-        if (logoutButton) {
-          logoutButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            logout();
-          });
-        }
-        
-        if (mobileLogoutButton) {
-          mobileLogoutButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            logout();
-          });
-        }
-      } else {
-        // User is not logged in
-        if (authButtons) authButtons.classList.remove('hidden');
-        if (userMenuContainer) userMenuContainer.classList.add('hidden');
-        if (mobileAuthLinks) mobileAuthLinks.classList.remove('hidden');
-        if (mobileUserLinks) mobileUserLinks.classList.add('hidden');
-      }
+    // Reset filters button
+    const resetFiltersBtn = document.getElementById('reset-filters');
+    if (resetFiltersBtn) {
+      resetFiltersBtn.addEventListener('click', function() {
+        resetFilters();
+      });
     }
     
-    // Setup user dropdown
-    function setupUserDropdown() {
-      const userMenuButton = document.getElementById('user-menu-button');
-      const userDropdown = document.getElementById('user-dropdown');
-      
-      if (userMenuButton && userDropdown) {
-        userMenuButton.addEventListener('click', function(e) {
-          e.stopPropagation();
-          userDropdown.classList.toggle('hidden');
-        });
-        
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(event) {
-          if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
-            userDropdown.classList.add('hidden');
-          }
-        });
-      }
+    // Retry button
+    const retryButton = document.getElementById('retry-button');
+    if (retryButton) {
+      retryButton.addEventListener('click', function() {
+        loadTasks();
+      });
     }
-    
-    // Setup notifications dropdown
-    function setupNotificationsDropdown() {
-      const notificationsButton = document.getElementById('notifications-button');
-      const notificationsDropdown = document.getElementById('notifications-dropdown');
-      
-      if (notificationsButton && notificationsDropdown) {
-        notificationsButton.addEventListener('click', function(e) {
-          e.stopPropagation();
-          notificationsDropdown.classList.toggle('hidden');
-        });
-        
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(event) {
-          if (!notificationsButton.contains(event.target) && !notificationsDropdown.contains(event.target)) {
-            notificationsDropdown.classList.add('hidden');
-          }
-        });
-      }
-    }
-    
-    // Logout function
-    function logout() {
-      localStorage.removeItem('token');
-      localStorage.removeItem('username');
-      localStorage.removeItem('userId');
-      localStorage.removeItem('userEmail');
-      
-      window.location.reload();
-    }
-    
-    // Global variables for filtering
-    let allTasks = [];
-    let displayedTasks = [];
-    let currentPage = 1;
-    const tasksPerPage = 12;
-    
-    // Load tasks from API
-    async function loadTasks() {
-      const loadingContainer = document.getElementById('loading-container');
-      const tasksContainer = document.getElementById('tasks-container');
-      const emptyContainer = document.getElementById('empty-container');
-      const errorContainer = document.getElementById('error-container');
-      const loadMoreContainer = document.getElementById('load-more-container');
+  }
+  
+  // Load tasks from API with better error handling
+  async function loadTasks() {
+    try {
+      // Prevent duplicate loading
+      if (state.isLoading) return;
+      state.isLoading = true;
       
       // Show loading state
-      if (loadingContainer) loadingContainer.classList.remove('hidden');
-      if (tasksContainer) tasksContainer.classList.add('hidden');
-      if (emptyContainer) emptyContainer.classList.add('hidden');
-      if (errorContainer) errorContainer.classList.add('hidden');
-      if (loadMoreContainer) loadMoreContainer.classList.add('hidden');
+      document.getElementById('loading-container').classList.remove('hidden');
+      document.getElementById('tasks-container').classList.add('hidden');
+      document.getElementById('error-container').classList.add('hidden');
+      document.getElementById('empty-container').classList.add('hidden');
       
-      try {
-        const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
-        
-        // Fetch tasks
-        const response = await fetch(`${API_URL}/api/tasks`);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to load tasks: ${response.status}`);
-        }
-        
-        // Parse the response
-        const tasks = await response.json();
-        
-        // Store all tasks
-        allTasks = tasks.filter(task => task.status === 'Open');
-        
-        // Hide loading container
-        if (loadingContainer) loadingContainer.classList.add('hidden');
-        
-        // Apply filters and render tasks
-        applyFiltersAndSort();
-        
-      } catch (error) {
-        console.error('Error loading tasks:', error);
-        
-        // Hide loading and show error state
-        if (loadingContainer) loadingContainer.classList.add('hidden');
-        if (errorContainer) errorContainer.classList.remove('hidden');
-      }
-    }
-    
-    // Setup filter event listeners
-    function setupFilters() {
-      const categoryFilter = document.getElementById('category-filter');
-      const locationFilter = document.getElementById('location-filter');
-      const minBudget = document.getElementById('min-budget');
-      const maxBudget = document.getElementById('max-budget');
-      const sortOptions = document.getElementById('sort-options');
-      const searchInput = document.getElementById('search-input');
+      console.log("Starting to load tasks...");
       
-      // Add event listeners to all filter inputs
-      [categoryFilter, locationFilter, minBudget, maxBudget, sortOptions].forEach(element => {
-        if (element) {
-          element.addEventListener('change', function() {
-            currentPage = 1;  // Reset to first page when filters change
-            applyFiltersAndSort();
-          });
-        }
-      });
-      
-      // Add search input handler with debounce
-      if (searchInput) {
-        let debounceTimeout;
-        searchInput.addEventListener('input', function() {
-          clearTimeout(debounceTimeout);
-          debounceTimeout = setTimeout(() => {
-            currentPage = 1;  // Reset to first page when search changes
-            applyFiltersAndSort();
-          }, 300);
-        });
-      }
-      
-      // Check URL parameters for initial filters
-      checkURLParams();
-    }
-    
-    // Check URL parameters for initial filter values
-    function checkURLParams() {
-      const urlParams = new URLSearchParams(window.location.search);
-      
-      // Apply category filter if present in URL
-      const categoryParam = urlParams.get('category');
-      if (categoryParam) {
-        const categoryFilter = document.getElementById('category-filter');
-        if (categoryFilter) {
-          // Try to find the option with this category
-          const options = categoryFilter.options;
-          for (let i = 0; i < options.length; i++) {
-            if (options[i].value === categoryParam) {
-              categoryFilter.selectedIndex = i;
-              break;
-            }
-          }
-        }
-      }
-      
-      // Apply location filter if present in URL
-      const locationParam = urlParams.get('location');
-      if (locationParam) {
-        const locationFilter = document.getElementById('location-filter');
-        if (locationFilter) {
-          locationFilter.value = locationParam;
-        }
-      }
-      
-      // Apply search filter if present in URL
-      const searchParam = urlParams.get('search');
-      if (searchParam) {
-        const searchInput = document.getElementById('search-input');
-        if (searchInput) {
-          searchInput.value = searchParam;
-        }
-      }
-      
-      // Apply other filters here if needed
-    }
-    
-    // Apply filters and sort tasks
-    function applyFiltersAndSort() {
-      const categoryFilter = document.getElementById('category-filter')?.value;
-      const locationFilter = document.getElementById('location-filter')?.value.toLowerCase();
-      const minBudget = document.getElementById('min-budget')?.value;
-      const maxBudget = document.getElementById('max-budget')?.value;
-      const sortOption = document.getElementById('sort-options')?.value;
-      const searchQuery = document.getElementById('search-input')?.value.toLowerCase();
-      
-      // Filter tasks
-      displayedTasks = allTasks.filter(task => {
-        // Category filter
-        if (categoryFilter && task.category !== categoryFilter) {
-          return false;
-        }
-        
-        // Location filter (case insensitive partial match)
-        if (locationFilter && !task.location?.toLowerCase().includes(locationFilter)) {
-          return false;
-        }
-        
-        // Budget filters
-        if (minBudget && (!task.budget || parseInt(task.budget) < parseInt(minBudget))) {
-          return false;
-        }
-        
-        if (maxBudget && (!task.budget || parseInt(task.budget) > parseInt(maxBudget))) {
-          return false;
-        }
-        
-        // Search query (in title and description)
-        if (searchQuery) {
-          const titleMatch = task.title?.toLowerCase().includes(searchQuery);
-          const descriptionMatch = task.description?.toLowerCase().includes(searchQuery);
+      // Check if TaskUtils is properly defined
+      if (window.TaskUtils && typeof TaskUtils.loadTasks === 'function') {
+        try {
+          console.log("Using TaskUtils.loadTasks");
           
-          if (!titleMatch && !descriptionMatch) {
-            return false;
-          }
-        }
-        
-        return true;
-      });
-      
-      // Sort tasks
-      if (sortOption) {
-        switch(sortOption) {
-          case 'newest':
-            displayedTasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            break;
-          case 'oldest':
-            displayedTasks.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-            break;
-          case 'budget-high':
-            displayedTasks.sort((a, b) => {
-              if (!a.budget) return 1;
-              if (!b.budget) return -1;
-              return parseInt(b.budget) - parseInt(a.budget);
-            });
-            break;
-          case 'budget-low':
-            displayedTasks.sort((a, b) => {
-              if (!a.budget) return 1;
-              if (!b.budget) return -1;
-              return parseInt(a.budget) - parseInt(b.budget);
-            });
-            break;
-        }
-      }
-      
-      // Update active filters display
-      updateActiveFilters(categoryFilter, locationFilter, minBudget, maxBudget, searchQuery);
-      
-      // Render first page of tasks
-      renderTasks();
-    }
-    
-    // Update display of active filters
-    function updateActiveFilters(category, location, minBudget, maxBudget, searchQuery) {
-      const appliedFiltersContainer = document.getElementById('applied-filters');
-      if (!appliedFiltersContainer) return;
-      
-      // Clear existing filters
-      appliedFiltersContainer.innerHTML = '';
-      
-      const activeFilters = [];
-      
-      // Add filters that are applied
-      if (category) {
-        activeFilters.push({ label: `Category: ${category}`, type: 'category' });
-      }
-      
-      if (location) {
-        activeFilters.push({ label: `Location: ${location}`, type: 'location' });
-      }
-      
-      if (minBudget && maxBudget) {
-        activeFilters.push({ label: `Budget: ₹${minBudget} - ₹${maxBudget}`, type: 'budget' });
-      } else if (minBudget) {
-        activeFilters.push({ label: `Budget: ≥ ₹${minBudget}`, type: 'min-budget' });
-      } else if (maxBudget) {
-        activeFilters.push({ label: `Budget: ≤ ₹${maxBudget}`, type: 'max-budget' });
-      }
-      
-      if (searchQuery) {
-        activeFilters.push({ label: `Search: "${searchQuery}"`, type: 'search' });
-      }
-      
-      // If no active filters, hide the container
-      if (activeFilters.length === 0) {
-        appliedFiltersContainer.classList.add('hidden');
-        return;
-      }
-      
-      // Show the container and create filter tags
-      appliedFiltersContainer.classList.remove('hidden');
-      
-      activeFilters.forEach(filter => {
-        const filterTag = document.createElement('div');
-        filterTag.className = 'inline-flex items-center bg-primary-light text-primary rounded-full px-3 py-1 text-sm';
-        filterTag.innerHTML = `
-          ${filter.label}
-          <button class="ml-1 focus:outline-none" data-filter-type="${filter.type}">
-            <i class="fas fa-times-circle"></i>
-          </button>
-        `;
-        
-        // Add click handler to remove the filter
-        const removeButton = filterTag.querySelector('button');
-        removeButton.addEventListener('click', () => {
-          removeFilter(filter.type);
-        });
-        
-        appliedFiltersContainer.appendChild(filterTag);
-      });
-      
-      // Add clear all button if multiple filters
-      if (activeFilters.length > 1) {
-        const clearAllButton = document.createElement('button');
-        clearAllButton.className = 'text-sm text-primary hover:underline ml-2';
-        clearAllButton.textContent = 'Clear All';
-        clearAllButton.addEventListener('click', resetFilters);
-        
-        appliedFiltersContainer.appendChild(clearAllButton);
-      }
-    }
-    
-    // Remove an individual filter
-    function removeFilter(filterType) {
-      switch (filterType) {
-        case 'category':
-          const categoryFilter = document.getElementById('category-filter');
-          if (categoryFilter) categoryFilter.value = '';
-          break;
-        case 'location':
-          const locationFilter = document.getElementById('location-filter');
-          if (locationFilter) locationFilter.value = '';
-          break;
-        case 'budget':
-        case 'min-budget':
-          const minBudget = document.getElementById('min-budget');
-          if (minBudget) minBudget.value = '';
-          break;
-        case 'max-budget':
-          const maxBudget = document.getElementById('max-budget');
-          if (maxBudget) maxBudget.value = '';
-          break;
-        case 'search':
-          const searchInput = document.getElementById('search-input');
-          if (searchInput) searchInput.value = '';
-          break;
-      }
-      
-      // Reset to first page and reapply filters
-      currentPage = 1;
-      applyFiltersAndSort();
-    }
-    
-    // Reset all filters
-    function resetFilters() {
-      const categoryFilter = document.getElementById('category-filter');
-      const locationFilter = document.getElementById('location-filter');
-      const minBudget = document.getElementById('min-budget');
-      const maxBudget = document.getElementById('max-budget');
-      const searchInput = document.getElementById('search-input');
-      
-      if (categoryFilter) categoryFilter.value = '';
-      if (locationFilter) locationFilter.value = '';
-      if (minBudget) minBudget.value = '';
-      if (maxBudget) maxBudget.value = '';
-      if (searchInput) searchInput.value = '';
-      
-      // Reset to first page and reapply filters
-      currentPage = 1;
-      applyFiltersAndSort();
-    }
-    
-    // Render the current page of tasks
-    function renderTasks() {
-      const tasksContainer = document.getElementById('tasks-container');
-      const emptyContainer = document.getElementById('empty-container');
-      const loadMoreContainer = document.getElementById('load-more-container');
-      
-      if (!tasksContainer || !emptyContainer || !loadMoreContainer) return;
-      
-      // Check if we have tasks after filtering
-      if (displayedTasks.length === 0) {
-        tasksContainer.classList.add('hidden');
-        emptyContainer.classList.remove('hidden');
-        loadMoreContainer.classList.add('hidden');
-        return;
-      }
-      
-      // Show tasks container, hide empty state
-      tasksContainer.classList.remove('hidden');
-      emptyContainer.classList.add('hidden');
-      
-      // Calculate which tasks to show on the current page
-      const startIndex = (currentPage - 1) * tasksPerPage;
-      const endIndex = startIndex + tasksPerPage;
-      const tasksToShow = displayedTasks.slice(startIndex, endIndex);
-      
-      // Clear tasks container if on first page
-      if (currentPage === 1) {
-        tasksContainer.innerHTML = '';
-      }
-      
-      // Add tasks to the container
-      tasksToShow.forEach((task, index) => {
-        const taskCard = createTaskCard(task, index);
-        tasksContainer.appendChild(taskCard);
-      });
-      
-      // Update load more button visibility
-      if (endIndex < displayedTasks.length) {
-        loadMoreContainer.classList.remove('hidden');
-        const loadMoreButton = document.getElementById('load-more-button');
-        if (loadMoreButton) {
-          loadMoreButton.onclick = () => {
-            currentPage++;
-            renderTasks();
-          };
+          const tasks = await TaskUtils.loadTasks({
+            showErrorCallback: (errorMessage) => {
+              console.log("Error callback triggered:", errorMessage);
+              document.getElementById('loading-container').classList.add('hidden');
+              document.getElementById('tasks-container').classList.add('hidden');
+              document.getElementById('error-container').classList.remove('hidden');
+              document.getElementById('empty-container').classList.add('hidden');
+            },
+            useMockData: false // Explicitly set to false to prevent mock data
+          });
+          
+          console.log(`Loaded ${tasks.length} tasks`);
+          
+          // Store tasks and update UI
+          state.tasks = tasks;
+          state.filteredTasks = [...tasks];
+          
+          // Apply current filters and sort
+          filterAndDisplayTasks();
+        } catch (utilsError) {
+          console.error("Error using TaskUtils.loadTasks:", utilsError);
+          // Fall back to direct implementation
+          await fallbackLoadTasks();
         }
       } else {
-        loadMoreContainer.classList.add('hidden');
+        // Fallback implementation
+        console.warn('TaskUtils.loadTasks not available, using fallback');
+        await fallbackLoadTasks();
+      }
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+      
+      // Show error state
+      document.getElementById('loading-container').classList.add('hidden');
+      document.getElementById('tasks-container').classList.add('hidden');
+      document.getElementById('error-container').classList.remove('hidden');
+      document.getElementById('empty-container').classList.add('hidden');
+    } finally {
+      state.isLoading = false;
+    }
+  }
+  
+  // Fallback implementation for loading tasks
+  async function fallbackLoadTasks() {
+    try {
+      // Try multiple API endpoints
+      const apiUrls = [
+        localStorage.getItem('apiUrl'),
+        'http://localhost:9000',
+        'http://127.0.0.1:9000',
+        'https://victormain1.onrender.com',
+        window.location.hostname !== 'localhost' ? `${window.location.protocol}//${window.location.hostname}:9000` : null
+      ].filter(Boolean);
+      
+      let success = false;
+      let lastError = null;
+      let tasks = [];
+      
+      for (const url of apiUrls) {
+        try {
+          console.log(`Attempting to fetch tasks from ${url}`);
+          
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // Increased timeout
+          
+          const headers = { 'Accept': 'application/json' };
+          
+          // Add auth token if available
+          const token = localStorage.getItem('token');
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+          
+          const response = await fetch(`${url}/api/tasks`, {
+            signal: controller.signal,
+            headers: headers,
+            cache: 'no-store'
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+          }
+          
+          tasks = await response.json();
+          
+          // Store successful API URL
+          localStorage.setItem('apiUrl', url);
+          console.log(`Successfully loaded ${tasks.length} tasks from ${url}`);
+          
+          success = true;
+          break;
+        } catch (error) {
+          console.warn(`Failed to fetch tasks from ${url}:`, error.message);
+          lastError = error;
+        }
+      }
+      
+      if (!success) {
+        // If API request fails, throw error instead of using mock data
+        throw lastError || new Error('Failed to fetch tasks from any API endpoint');
+      }
+      
+      // Store tasks and update UI
+      state.tasks = tasks;
+      state.filteredTasks = [...tasks];
+      
+      // Apply current filters and sort
+      filterAndDisplayTasks();
+      
+    } catch (error) {
+      console.error("Final fallback attempt failed:", error);
+      throw error; // Re-throw for the outer catch block
+    }
+  }
+  
+  // Filter and display tasks
+  function filterAndDisplayTasks() {
+    state.filteredTasks = state.tasks.filter(task => {
+      // Search filter
+      if (state.filters.search) {
+        const searchText = state.filters.search.toLowerCase();
+        const titleMatch = (task.title || '').toLowerCase().includes(searchText);
+        const descriptionMatch = (task.description || '').toLowerCase().includes(searchText);
+        
+        if (!titleMatch && !descriptionMatch) return false;
+      }
+      
+      // Category filter
+      if (state.filters.category && task.category !== state.filters.category) {
+        return false;
+      }
+      
+      // Location filter
+      if (state.filters.location && task.location !== state.filters.location) {
+        return false;
+      }
+      
+      // Budget filters
+      if (state.filters.minBudget && task.budget && parseInt(task.budget) < parseInt(state.filters.minBudget)) {
+        return false;
+      }
+      
+      if (state.filters.maxBudget && task.budget && parseInt(task.budget) > parseInt(state.filters.maxBudget)) {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    // Sort filtered tasks
+    sortTasks();
+    
+    // Display tasks
+    displayTasks();
+  }
+  
+  // Sort tasks
+  function sortTasks() {
+    state.filteredTasks.sort((a, b) => {
+      switch (state.sort) {
+        case 'newest':
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        case 'oldest':
+          return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+        case 'budget-high':
+          if (!a.budget) return 1;
+          if (!b.budget) return -1;
+          return parseInt(b.budget) - parseInt(a.budget);
+        case 'budget-low':
+          if (!a.budget) return 1;
+          if (!b.budget) return -1;
+          return parseInt(a.budget) - parseInt(b.budget);
+        default:
+          return 0;
+      }
+    });
+  }
+  
+  // Display tasks
+  function displayTasks() {
+    const tasksContainer = document.getElementById('tasks-container');
+    const loadingContainer = document.getElementById('loading-container');
+    const emptyContainer = document.getElementById('empty-container');
+    const errorContainer = document.getElementById('error-container');
+    
+    if (!tasksContainer || !loadingContainer || !emptyContainer) return;
+    
+    // Hide loading and error states
+    loadingContainer.classList.add('hidden');
+    errorContainer.classList.add('hidden');
+    
+    // Check if we have tasks after filtering
+    if (state.filteredTasks.length === 0) {
+      tasksContainer.classList.add('hidden');
+      emptyContainer.classList.remove('hidden');
+      return;
+    }
+    
+    // We have tasks to show
+    tasksContainer.classList.remove('hidden');
+    emptyContainer.classList.add('hidden');
+    
+    // Clear container
+    tasksContainer.innerHTML = '';
+    
+    // Reset display style in case it was explicitly set 
+    tasksContainer.style.display = 'grid';
+    
+    // Calculate pagination
+    const startIndex = (state.currentPage - 1) * state.tasksPerPage;
+    const endIndex = Math.min(startIndex + state.tasksPerPage, state.filteredTasks.length);
+    
+    // Display tasks for current page
+    for (let i = startIndex; i < endIndex; i++) {
+      const task = state.filteredTasks[i];
+      
+      // Ensure task has critical fields to avoid errors
+      if (!task) continue;
+      
+      try {
+        // Create task card with error handling
+        let taskCard;
+        
+        // Use TaskUtils if available and working
+        if (window.TaskUtils && typeof TaskUtils.createTaskCard === 'function') {
+          taskCard = TaskUtils.createTaskCard(task);
+        } else {
+          // Fallback to the simple implementation
+          taskCard = createTaskCard(task);
+        }
+        
+        if (taskCard) {
+          tasksContainer.appendChild(taskCard);
+        }
+      } catch (cardError) {
+        console.error("Error creating task card:", cardError, task);
+        // Create basic fallback card on error
+        const basicCard = createBasicTaskCard(task);
+        tasksContainer.appendChild(basicCard);
       }
     }
     
-    // Create a task card element
-    function createTaskCard(task, index) {
-      const card = document.createElement('div');
-      card.className = 'bg-white rounded-lg shadow-sm overflow-hidden task-card animate-fade-in';
-      card.style.animationDelay = `${(index % tasksPerPage) * 0.1}s`;
-      
-      const formattedDate = TaskUtils?.formatDate 
-        ? TaskUtils.formatDate(task.createdAt, true)
-        : formatDate(task.createdAt);
-      
-      // Truncate description to reasonable length
-      const shortDescription = task.description?.length > 100
-        ? task.description.substring(0, 100) + '...'
-        : task.description;
-      
-      card.innerHTML = `
-        <div class="p-5">
-          <div class="flex justify-between items-start mb-3">
-            <h3 class="font-semibold text-lg">
-              <a href="task-detail.html?id=${task._id || task.id}" class="hover:text-primary transition-colors">${task.title}</a>
-            </h3>
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-600 status-pill">
-              <i class="fas fa-circle text-xs mr-1"></i>Open
-            </span>
-          </div>
-          
-          <p class="text-gray-600 text-sm mb-4">${shortDescription}</p>
-          
-          <div class="flex items-center text-sm text-gray-500 mb-3">
-            <i class="fas fa-tag mr-2 opacity-70"></i>
-            <span>${task.category || 'Other'}</span>
-          </div>
-          
-          <div class="flex items-center text-sm text-gray-500 mb-3">
-            <i class="fas fa-map-marker-alt mr-2 opacity-70"></i>
-            <span>${task.location || 'Remote'}</span>
-          </div>
-          
-          <div class="flex items-center text-sm text-gray-500">
-            <i class="fas fa-rupee-sign mr-2 opacity-70"></i>
-            <span>${task.budget ? `₹${task.budget}` : 'Negotiable'}</span>
-          </div>
-          
-          <div class="border-t border-gray-100 mt-4 pt-4 flex justify-between items-center">
-            <div class="text-xs text-gray-500">Posted ${formattedDate}</div>
-            <a href="task-detail.html?id=${task._id || task.id}" class="text-primary hover:underline text-sm">
-              View Details
-            </a>
-          </div>
-        </div>
-      `;
-      
-      return card;
-    }
+    // Update load more button if needed
+    updateLoadMoreButton(endIndex < state.filteredTasks.length);
+  }
+  
+  // Create task card element - simple fallback
+  function createTaskCard(task) {
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-lg shadow-sm overflow-hidden task-card';
     
-    // Format date helper function
-    function formatDate(dateString, relative = false) {
-      if (!dateString) return 'Recently';
+    // Format date
+    const dateFormatted = formatDate(task.createdAt);
+    
+    // Truncate description
+    const description = task.description || '';
+    const shortDescription = description.length > 150
+      ? description.substring(0, 150) + '...'
+      : description;
       
+    // Format budget
+    const budget = task.budget
+      ? `₹${parseInt(task.budget).toLocaleString()}`
+      : 'Negotiable';
+    
+    card.innerHTML = `
+      <div class="p-5">
+        <div class="flex justify-between items-start mb-3">
+          <h3 class="font-semibold text-lg">
+            <a href="task-detail.html?id=${task._id || task.id}" class="hover:text-primary transition-colors">
+              ${task.title || 'Untitled Task'}
+            </a>
+          </h3>
+          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusClass(task.status)}">
+            <i class="fas fa-circle text-xs mr-1"></i>${task.status || 'Open'}
+          </span>
+        </div>
+        
+        <p class="text-gray-600 text-sm mb-4">${shortDescription}</p>
+        
+        <div class="flex items-center text-sm text-gray-500 mb-3">
+          <i class="fas fa-tag mr-2 opacity-70"></i>
+          <span>${task.category || 'Other'}</span>
+        </div>
+        
+        <div class="flex items-center text-sm text-gray-500 mb-3">
+          <i class="fas fa-map-marker-alt mr-2 opacity-70"></i>
+          <span>${task.location || 'Remote'}</span>
+        </div>
+        
+        <div class="flex items-center text-sm text-gray-500">
+          <i class="fas fa-rupee-sign mr-2 opacity-70"></i>
+          <span>${budget}</span>
+        </div>
+        
+        <div class="border-t border-gray-100 mt-4 pt-4 flex justify-between items-center">
+          <div class="text-xs text-gray-500">Posted ${dateFormatted}</div>
+          <a href="task-detail.html?id=${task._id || task.id}" class="text-primary hover:underline text-sm">
+            View Details
+          </a>
+        </div>
+      </div>
+    `;
+    
+    return card;
+  }
+  
+  // Create a very basic task card as ultimate fallback
+  function createBasicTaskCard(task) {
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-lg shadow-sm overflow-hidden task-card p-4';
+    card.innerHTML = `
+      <h3 class="font-semibold">${task.title || 'Untitled Task'}</h3>
+      <p class="text-sm text-gray-500 mt-2">${task.description?.substring(0, 100) || 'No description'}</p>
+      <a href="task-detail.html?id=${task._id || task.id}" class="text-primary block mt-3">View Details</a>
+    `;
+    return card;
+  }
+  
+  // Update the load more button
+  function updateLoadMoreButton(hasMore) {
+    const loadMoreContainer = document.getElementById('load-more-container');
+    if (!loadMoreContainer) return;
+    
+    if (hasMore) {
+      loadMoreContainer.classList.remove('hidden');
+      
+      // Add event listener to load more button if needed
+      const loadMoreButton = document.getElementById('load-more-button');
+      if (loadMoreButton) {
+        loadMoreButton.onclick = function() {
+          state.currentPage++;
+          displayTasks();
+        };
+      }
+    } else {
+      loadMoreContainer.classList.add('hidden');
+    }
+  }
+  
+  // Reset all filters
+  function resetFilters() {
+    // Reset filter state
+    state.filters = {
+      search: '',
+      category: '',
+      location: '',
+      minBudget: '',
+      maxBudget: ''
+    };
+    state.currentPage = 1;
+    
+    // Reset form inputs
+    const searchInput = document.getElementById('search-input');
+    const categoryFilter = document.getElementById('category-filter');
+    const locationFilter = document.getElementById('location-filter');
+    const minBudget = document.getElementById('min-budget');
+    const maxBudget = document.getElementById('max-budget');
+    
+    if (searchInput) searchInput.value = '';
+    if (categoryFilter) categoryFilter.value = '';
+    if (locationFilter) locationFilter.value = '';
+    if (minBudget) minBudget.value = '';
+    if (maxBudget) maxBudget.value = '';
+    
+    // Update display
+    filterAndDisplayTasks();
+  }
+  
+  // Helper: Format date
+  function formatDate(dateString) {
+    if (!dateString) return 'Recently';
+    
+    try {
+      // Use TaskUtils if available
+      if (window.TaskUtils && typeof TaskUtils.formatDate === 'function') {
+        return TaskUtils.formatDate(dateString, true);
+      }
+      
+      // Fallback implementation
       const date = new Date(dateString);
       const now = new Date();
-      const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+      const diffTime = now - date;
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
       
-      if (relative) {
-        if (diffDays === 0) return 'Today';
+      if (isNaN(date.getTime())) return 'Recently';
+      
+      if (diffHours < 24) {
+        if (diffHours <= 1) return 'Just now';
+        return `${diffHours} hours ago`;
+      }
+      
+      if (diffDays < 7) {
         if (diffDays === 1) return 'Yesterday';
-        if (diffDays < 7) return `${diffDays} days ago`;
-        if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+        return `${diffDays} days ago`;
       }
       
       return date.toLocaleDateString();
+    } catch (e) {
+      console.error('Error formatting date:', e);
+      return 'Recently';
     }
-  </script>
+  }
+  
+  // Helper: Get CSS classes for task status
+  function getStatusClass(status) {
+    switch (status) {
+      case 'Open':
+        return 'bg-green-50 text-green-600';
+      case 'In Progress':
+        return 'bg-yellow-50 text-yellow-600';
+      case 'Completed':
+        return 'bg-blue-50 text-blue-600';
+      case 'Cancelled':
+        return 'bg-gray-50 text-gray-500';
+      default:
+        return 'bg-green-50 text-green-600';
+    }
+  }
+  
+  // Check login status and update UI accordingly
+  function checkLoginStatus() {
+    const token = localStorage.getItem('token');
+    const username = localStorage.getItem('username');
+    const userEmail = localStorage.getItem('userEmail');
+    
+    const authButtons = document.getElementById('auth-buttons');
+    const userMenuContainer = document.getElementById('user-menu-container');
+    const mobileAuthLinks = document.getElementById('mobile-auth-links');
+    const mobileUserLinks = document.getElementById('mobile-user-links');
+    
+    if (token) {
+      // User is logged in
+      if (authButtons) authButtons.classList.add('hidden');
+      if (userMenuContainer) userMenuContainer.classList.remove('hidden');
+      if (mobileAuthLinks) mobileAuthLinks.classList.add('hidden');
+      if (mobileUserLinks) mobileUserLinks.classList.remove('hidden');
+      
+      // Update user info
+      const usernameDisplay = document.getElementById('username-display');
+      const userNameDropdown = document.getElementById('user-name-dropdown');
+      const userEmailDropdown = document.getElementById('user-email-dropdown');
+      const userAvatar = document.getElementById('user-avatar');
+      
+      if (usernameDisplay && username) usernameDisplay.textContent = username;
+      if (userNameDropdown && username) userNameDropdown.textContent = username;
+      if (userEmailDropdown && userEmail) userEmailDropdown.textContent = userEmail;
+      if (userAvatar && username) userAvatar.textContent = username.charAt(0).toUpperCase();
+      
+      // Setup logout buttons
+      const logoutButton = document.getElementById('logout-button');
+      const mobileLogoutButton = document.getElementById('mobile-logout-button');
+      
+      if (logoutButton) {
+        logoutButton.addEventListener('click', function(e) {
+          e.preventDefault();
+          logout();
+        });
+      }
+      
+      if (mobileLogoutButton) {
+        mobileLogoutButton.addEventListener('click', function(e) {
+          e.preventDefault();
+          logout();
+        });
+      }
+      
+    } else {
+      // User is not logged in
+      if (authButtons) authButtons.classList.remove('hidden');
+      if (userMenuContainer) userMenuContainer.classList.add('hidden');
+      if (mobileAuthLinks) mobileAuthLinks.classList.remove('hidden');
+      if (mobileUserLinks) mobileUserLinks.classList.add('hidden');
+    }
+  }
+  
+  // Setup user dropdown
+  function setupUserDropdown() {
+    const userMenuButton = document.getElementById('user-menu-button');
+    const userDropdown = document.getElementById('user-dropdown');
+    
+    if (userMenuButton && userDropdown) {
+      userMenuButton.addEventListener('click', function(e) {
+        e.stopPropagation();
+        userDropdown.classList.toggle('hidden');
+      });
+      
+      // Close dropdown when clicking outside
+      document.addEventListener('click', function(event) {
+        if (!userMenuButton.contains(event.target) && !userDropdown.contains(event.target)) {
+          userDropdown.classList.add('hidden');
+        }
+      });
+    }
+  }
+  
+  // Setup notifications dropdown
+  function setupNotificationsDropdown() {
+    const notificationsButton = document.getElementById('notifications-button');
+    const notificationsDropdown = document.getElementById('notifications-dropdown');
+    
+    if (notificationsButton && notificationsDropdown) {
+      notificationsButton.addEventListener('click', function(e) {
+        e.stopPropagation();
+        notificationsDropdown.classList.toggle('hidden');
+      });
+      
+      // Close dropdown when clicking outside
+      document.addEventListener('click', function(event) {
+        if (!notificationsButton.contains(event.target) && !notificationsDropdown.contains(event.target)) {
+          notificationsDropdown.classList.add('hidden');
+        }
+      });
+    }
+  }
+  
+  // Logout function
+  function logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userEmail');
+    
+    window.location.reload();
+  }
+</script>
   <script src="js/notification-handler.js"></script>
-  <script src="/js/chat.js"></script>
+  <script src="js/chat.js"></script>
 </body>
 </html>
