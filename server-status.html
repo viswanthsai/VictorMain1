@@ -4,191 +4,266 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Server Status - Victor</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <link rel="stylesheet" href="css/custom.css">
-</head>
-<body class="bg-gray-100">
-
-  <div class="container mx-auto px-4 py-12">
-    <div class="max-w-3xl mx-auto">
-      <h1 class="text-3xl font-bold mb-8 text-center">Server Status</h1>
-      
-      <!-- API Server Status -->
-      <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 class="text-xl font-semibold mb-4">
-          <i class="fas fa-server mr-2 text-blue-500"></i>API Server
-        </h2>
-        <div id="api-test-result" class="p-6 bg-gray-50 border border-gray-200 rounded-lg">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <span class="font-medium">Status:</span>
-              <span id="api-status" class="ml-2">Checking...</span>
-            </div>
-            <button id="api-retry-button" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <i class="fas fa-sync-alt mr-1"></i> Retry
-            </button>
-            <!-- Add this button under your retry button -->
-            <button id="direct-test-button" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 ml-2">
-              <i class="fas fa-link mr-1"></i> Test Direct URL
-            </button>
-          </div>
-          <p id="api-message" class="text-gray-600"></p>
-          <pre id="api-details" class="mt-4 p-3 bg-gray-100 rounded text-sm overflow-auto max-h-40 hidden"></pre>
-        </div>
-      </div>
-      
-      <!-- Database Status -->
-      <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 class="text-xl font-semibold mb-4">
-          <i class="fas fa-database mr-2 text-green-500"></i>Database Connection
-        </h2>
-        <div id="db-test-result" class="p-6 bg-gray-50 border border-gray-200 rounded-lg">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <span class="font-medium">Status:</span>
-              <span id="db-status" class="ml-2">Checking...</span>
-            </div>
-            <button id="retry-button" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <i class="fas fa-sync-alt mr-1"></i> Retry
-            </button>
-          </div>
-          <p id="db-message" class="text-gray-600"></p>
-          <pre id="db-details" class="mt-4 p-3 bg-gray-100 rounded text-sm overflow-auto max-h-40 hidden"></pre>
-        </div>
-      </div>
-      
-      <!-- Connection Configuration -->
-      <div class="bg-white rounded-lg shadow-md p-6">
-        <h2 class="text-xl font-semibold mb-4">
-          <i class="fas fa-cog mr-2 text-gray-500"></i>API Connection
-        </h2>
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Current API URL</label>
-          <div class="flex">
-            <input type="text" id="current-api-url" class="flex-grow border border-gray-300 rounded-l px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" readonly>
-            <button id="copy-api-url" class="bg-gray-200 px-3 py-2 rounded-r border-t border-r border-b border-gray-300">
-              <i class="far fa-copy"></i>
-            </button>
-          </div>
-        </div>
-        
-        <form id="api-url-form" class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Custom API URL</label>
-          <div class="flex">
-            <input type="url" id="new-api-url" class="flex-grow border border-gray-300 rounded-l px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" placeholder="https://your-api-server.com">
-            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-r hover:bg-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-500">
-              Update
-            </button>
-          </div>
-          <p class="text-xs text-gray-500 mt-1">Enter a custom API URL if your backend is hosted at a different location</p>
-        </form>
-        
-        <div id="connection-result" class="hidden mt-4 p-3 rounded"></div>
-      </div>
-      
-      <!-- Back button -->
-      <div class="mt-8 text-center">
-        <a href="index.html" class="inline-flex items-center text-blue-600 hover:text-blue-800">
-          <i class="fas fa-arrow-left mr-2"></i>Back to Home
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <!-- Scripts -->
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Add essential scripts -->
+  <script src="js/network-checker.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/api-test.js"></script>
-  <script src="js/db-test.js"></script>
+  <script src="js/error-handler.js"></script>
+  <script src="js/status-checker.js"></script>
   
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Display current API URL
-      const currentApiUrlInput = document.getElementById('current-api-url');
-      const apiUrl = window.API_CONFIG ? window.API_CONFIG.API_URL : localStorage.getItem('api_url') || 'http://localhost:9000';
-      currentApiUrlInput.value = apiUrl;
-      
-      // Copy API URL button
-      document.getElementById('copy-api-url').addEventListener('click', function() {
-        currentApiUrlInput.select();
-        document.execCommand('copy');
-        
-        const button = this;
-        const originalHTML = button.innerHTML;
-        button.innerHTML = '<i class="fas fa-check"></i>';
-        setTimeout(() => {
-          button.innerHTML = originalHTML;
-        }, 1000);
-      });
-      
-      // Handle form submission for changing API URL
-      document.getElementById('api-url-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const newUrl = document.getElementById('new-api-url').value.trim();
-        if (!newUrl) return;
-        
-        const resultDiv = document.getElementById('connection-result');
-        resultDiv.className = 'mt-4 p-3 rounded bg-blue-50 text-blue-700';
-        resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Testing connection...';
-        resultDiv.classList.remove('hidden');
-        
-        try {
-          const response = await fetch(`${newUrl}/api/status`);
-          
-          if (response.ok) {
-            // Update stored URL
-            if (window.API_CONFIG) {
-              window.API_CONFIG.API_URL = newUrl;
-            }
-            localStorage.setItem('api_url', newUrl);
-            currentApiUrlInput.value = newUrl;
-            
-            resultDiv.className = 'mt-4 p-3 rounded bg-green-50 text-green-700';
-            resultDiv.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Connection successful. API URL updated.';
-            
-            // Refresh tests
-            if (window.testApiConnection) {
-              window.testApiConnection();
-            }
-            if (window.testDatabaseConnection) {
-              window.testDatabaseConnection();
-            }
-          } else {
-            resultDiv.className = 'mt-4 p-3 rounded bg-red-50 text-red-700';
-            resultDiv.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>Could not connect to API at this URL.';
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              DEFAULT: '#1a73e8',
+              dark: '#1557b0',
+              light: '#e8f0fe',
+            },
+            secondary: '#5f6368',
+            success: '#0d904f',
+            warning: '#f9ab00',
+            danger: '#d93025',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
           }
-        } catch (error) {
-          resultDiv.className = 'mt-4 p-3 rounded bg-red-50 text-red-700';
-          resultDiv.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i>Connection error: ${error.message}`;
         }
-      });
-
-      // Add direct test button functionality
-      document.getElementById('direct-test-button')?.addEventListener('click', async () => {
-        const apiUrl = document.getElementById('current-api-url').value.trim();
-        const url = `${apiUrl}/api/db-test`;
-        
-        alert(`Testing direct URL: ${url}\nCheck browser console for response.`);
-        
-        try {
-          const response = await fetch(url);
-          const contentType = response.headers.get('content-type');
-          console.log('Response headers:', [...response.headers.entries()]);
-          console.log('Content-Type:', contentType);
-          
-          if (contentType && contentType.includes('application/json')) {
-            const data = await response.json();
-            console.log('JSON Response:', data);
-          } else {
-            const text = await response.text();
-            console.log('Text Response:', text.substring(0, 500) + '...');
-          }
-        } catch (error) {
-          console.error('Direct test error:', error);
-        }
-      });
-    });
+      }
+    }
   </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .status-card {
+      transition: all 0.3s ease;
+    }
+    
+    .status-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .animate-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+  <!-- Header -->
+  <header class="bg-white shadow-sm">
+    <div class="container mx-auto px-4">
+      <div class="flex items-center justify-between py-3">
+        <a class="text-primary font-bold text-2xl flex items-center" href="index.html">
+          <span class="bg-gradient-to-r from-primary to-blue-600 text-white p-1.5 rounded mr-1.5 flex items-center justify-center w-8 h-8">V</span>ictor
+        </a>
+        
+        <nav class="hidden md:flex items-center space-x-1">
+          <a href="index.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Home</a>
+          <a href="tasks.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Browse Tasks</a>
+          <a href="post-task.html" class="px-3 py-2 text-gray-700 hover:text-primary rounded-md transition-colors">Post a Task</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="flex-grow container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">System Status</h1>
+      <p class="text-gray-600 mb-8">Check the current status of Victor's services and components.</p>
+      
+      <!-- Status overview -->
+      <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-semibold">System Overview</h2>
+          <button id="refresh-btn" class="flex items-center px-4 py-2 text-primary border border-primary rounded-lg hover:bg-primary-light transition-colors">
+            <i class="fas fa-sync-alt mr-2"></i>
+            Refresh
+          </button>
+        </div>
+        
+        <div id="overall-status" class="flex items-center p-4 bg-gray-50 rounded-lg mb-6">
+          <div id="overall-status-icon" class="h-12 w-12 rounded-full flex items-center justify-center mr-4 bg-gray-200">
+            <i class="fas fa-circle-notch fa-spin text-gray-500 text-xl"></i>
+          </div>
+          <div>
+            <h3 id="overall-status-text" class="font-medium text-lg">Checking system status...</h3>
+            <p id="overall-status-message" class="text-gray-600">Please wait while we check all services.</p>
+          </div>
+        </div>
+        
+        <p class="text-sm text-gray-500 mb-2">Last checked: <span id="last-checked">Checking...</span></p>
+      </div>
+      
+      <!-- Component status cards -->
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- API Server -->
+        <div id="api-card" class="status-card bg-white rounded-xl shadow-sm p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">API Server</h3>
+            <div id="api-status" class="flex items-center">
+              <div class="animate-pulse h-3 w-3 rounded-full bg-gray-300 mr-2"></div>
+              <span class="text-gray-500">Checking...</span>
+            </div>
+          </div>
+          <div class="text-sm text-gray-600 space-y-3">
+            <div class="flex justify-between">
+              <span>Endpoint:</span>
+              <span id="api-endpoint" class="font-medium">Checking...</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Latency:</span>
+              <span id="api-latency" class="font-medium">-</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Response:</span>
+              <span id="api-response-code" class="font-medium">-</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- MongoDB -->
+        <div id="mongodb-card" class="status-card bg-white rounded-xl shadow-sm p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">MongoDB Database</h3>
+            <div id="mongodb-status" class="flex items-center">
+              <div class="animate-pulse h-3 w-3 rounded-full bg-gray-300 mr-2"></div>
+              <span class="text-gray-500">Checking...</span>
+            </div>
+          </div>
+          <div class="text-sm text-gray-600 space-y-3">
+            <div class="flex justify-between">
+              <span>Connection:</span>
+              <span id="mongodb-connection" class="font-medium">Checking...</span>
+            </div>
+            <div class="flex justify-between">
+              <span>State:</span>
+              <span id="mongodb-state" class="font-medium">-</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Response time:</span>
+              <span id="mongodb-response-time" class="font-medium">-</span>
+            </div>
+          </div>
+          <div id="mongodb-error" class="mt-4 text-sm text-red-500 hidden"></div>
+        </div>
+        
+        <!-- Network -->
+        <div id="network-card" class="status-card bg-white rounded-xl shadow-sm p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">Network</h3>
+            <div id="network-status" class="flex items-center">
+              <div class="animate-pulse h-3 w-3 rounded-full bg-gray-300 mr-2"></div>
+              <span class="text-gray-500">Checking...</span>
+            </div>
+          </div>
+          <div class="text-sm text-gray-600 space-y-3">
+            <div class="flex justify-between">
+              <span>Connectivity:</span>
+              <span id="network-connectivity" class="font-medium">Checking...</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Connection type:</span>
+              <span id="network-type" class="font-medium">-</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Ping (Google):</span>
+              <span id="network-ping" class="font-medium">-</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Client -->
+        <div id="client-card" class="status-card bg-white rounded-xl shadow-sm p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">Client</h3>
+            <div id="client-status" class="flex items-center">
+              <div class="h-3 w-3 rounded-full bg-green-500 mr-2"></div>
+              <span class="text-green-600">Online</span>
+            </div>
+          </div>
+          <div class="text-sm text-gray-600 space-y-3">
+            <div class="flex justify-between">
+              <span>Browser:</span>
+              <span id="client-browser" class="font-medium">Loading...</span>
+            </div>
+            <div class="flex justify-between">
+              <span>User agent:</span>
+              <span id="client-agent" class="font-medium">Loading...</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Platform:</span>
+              <span id="client-platform" class="font-medium">Loading...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Troubleshooting section -->
+      <div class="mt-8 bg-white rounded-xl shadow-sm p-6">
+        <h2 class="text-xl font-semibold mb-4">Troubleshooting</h2>
+        
+        <div class="space-y-4">
+          <div id="network-troubleshoot" class="hidden">
+            <h3 class="font-medium text-orange-600"><i class="fas fa-exclamation-triangle mr-2"></i> Network Connection Issues</h3>
+            <ul class="list-disc list-inside ml-4 mt-2 text-gray-700 space-y-1">
+              <li>Check your internet connection</li>
+              <li>Try refreshing the page</li>
+              <li>If using VPN, try disconnecting</li>
+              <li>Clear browser cache and cookies</li>
+            </ul>
+          </div>
+          
+          <div id="api-troubleshoot" class="hidden">
+            <h3 class="font-medium text-orange-600"><i class="fas fa-exclamation-triangle mr-2"></i> API Connection Issues</h3>
+            <ul class="list-disc list-inside ml-4 mt-2 text-gray-700 space-y-1">
+              <li>The API server might be down temporarily</li>
+              <li>Try again in a few minutes</li>
+              <li>Check if the API URL is correct in your configuration</li>
+              <li>Contact support if the issue persists</li>
+            </ul>
+          </div>
+          
+          <div id="mongodb-troubleshoot" class="hidden">
+            <h3 class="font-medium text-orange-600"><i class="fas fa-exclamation-triangle mr-2"></i> MongoDB Connection Issues</h3>
+            <ul class="list-disc list-inside ml-4 mt-2 text-gray-700 space-y-1">
+              <li>MongoDB service might be temporarily down</li>
+              <li>Data will be saved locally until connection is restored</li>
+              <li>No immediate action required</li>
+              <li>We'll automatically reconnect once the database is available</li>
+            </ul>
+          </div>
+          
+          <div id="all-ok" class="text-center py-4 text-green-600">
+            <i class="fas fa-check-circle text-4xl mb-2"></i>
+            <p class="font-medium">All systems are operational</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 text-white py-8 mt-12">
+    <div class="container mx-auto px-4">
+      <div class="border-t border-gray-700 mt-8 pt-8 text-center">
+        <p class="text-gray-300">© 2023 Victor - Connect for Tasks. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>

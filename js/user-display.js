@@ -25,7 +25,6 @@ function updateUserDisplay() {
   // Common elements across pages
   const userAvatar = document.getElementById('user-avatar');
   const usernameDisplay = document.getElementById('username-display');
-  const userDropdown = document.getElementById('user-dropdown');
   const userNameDropdown = document.getElementById('user-name-dropdown');
   const userEmailDropdown = document.getElementById('user-email-dropdown');
   

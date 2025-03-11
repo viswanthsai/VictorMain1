@@ -209,7 +209,7 @@ async function loadMessages(chatId) {
   }
 }
 
-// Display messages in the chat
+// Function to display messages in the chat
 function displayMessages(messages) {
   console.log("Displaying messages:", messages);
   const messagesContainer = document.getElementById('messages-container');
@@ -240,6 +240,7 @@ function displayMessages(messages) {
     // Always use "content" field for message text
     const messageText = msg.content || msg.text || msg.message || "";
     const messageSender = msg.senderId;
+    const senderName = msg.senderName || "Unknown"; // Use senderName if available
     const messageTime = msg.createdAt || msg.timestamp || new Date();
     
     const isCurrentUser = messageSender === currentUserId;
@@ -252,6 +253,7 @@ function displayMessages(messages) {
     messagesContainer.innerHTML += `
       <div class="flex mb-3 ${isCurrentUser ? 'justify-end' : ''}">
         <div class="max-w-[80%] rounded-lg px-4 py-2 ${messageClass}">
+          ${!isCurrentUser ? `<div class="text-xs font-medium mb-1 text-gray-600">${senderName}</div>` : ''}
           <div>${messageText}</div>
           <div class="text-xs ${isCurrentUser ? 'text-blue-200' : 'text-gray-500'} mt-1 text-right">
             ${formatMessageTime(messageTime)}
@@ -290,6 +292,7 @@ function formatMessageTime(timestamp) {
 async function sendMessage(chatId, message) {
   const API_URL = window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000';
   const token = localStorage.getItem('token');
+  const username = localStorage.getItem('username');
   
   if (!token || !chatId) return;
   
@@ -323,14 +326,15 @@ async function sendMessage(chatId, message) {
         'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({ 
-        content: message 
+        content: message,
+        senderName: username // Include the sender name with the message
       })
     });
     
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Failed to send message:', errorData);
-      throw new Error(errorData.message || 'Failed to send message');
+      const error = await response.json();
+      console.error('Error sending message:', error);
+      throw new Error(error.message || 'Failed to send message');
     }
     
     // Message sent successfully, reload messages to ensure consistency
@@ -512,5 +516,312 @@ async function createOrGetChat(taskId, recipientId) {
         </div>
       </div>
     `;
+  }
+}
+
+/**
+ * Create a message element
+ */
+function createMessageElement(message, isOwnMessage) {
+  const messageElement = document.createElement('div');
+  messageElement.className = isOwnMessage 
+    ? 'chat-message chat-message-right mb-4'
+    : 'chat-message chat-message-left mb-4';
+  
+  // Format time
+  const time = formatMessageTime(message.createdAt || new Date());
+  
+  // Check for special message types
+  const isOfferMessage = message.content && message.content.includes("I've submitted an offer for");
+  const isSystemMessage = message.messageType === 'system';
+  
+  // Base style classes
+  let containerClass = isOwnMessage 
+    ? 'bg-primary-light text-gray-800 rounded-lg rounded-tr-none py-2 px-4 inline-block'
+    : 'bg-white border border-gray-200 text-gray-800 rounded-lg rounded-tl-none py-2 px-4 inline-block';
+  
+  // Special style for offer messages
+  if (isOfferMessage) {
+    containerClass = isOwnMessage 
+      ? 'bg-green-50 border border-green-200 text-gray-800 rounded-lg rounded-tr-none py-2 px-4 inline-block'
+      : 'bg-green-50 border border-green-200 text-gray-800 rounded-lg rounded-tl-none py-2 px-4 inline-block';
+  } else if (isSystemMessage) {
+    containerClass = 'bg-gray-100 text-gray-700 rounded-lg py-2 px-4 inline-block';
+  }
+  
+  // Format content with extra styling for offer messages
+  let displayContent = message.content;
+  if (isOfferMessage) {
+    // Apply nice formatting to offer messages
+    displayContent = message.content
+      .replace("I've submitted an offer for", "<strong>I've submitted an offer for</strong>")
+      .replace(/•\s(.*?):/g, '<br>• <strong>$1:</strong>')
+      .replace(/₹(\d+)/g, '₹<strong>$1</strong>');
+  }
+  
+  messageElement.innerHTML = `
+    <div class="${isOwnMessage ? 'flex flex-col items-end' : 'flex flex-col'}">
+      <div class="${containerClass}">
+        <div class="message-content">${displayContent}</div>
+      </div>
+      <span class="text-xs text-gray-500 mt-1">${time}</span>
+    </div>
+  `;
+  
+  return messageElement;
+}
+
+/**
+ * Load chat messages
+ */
+async function loadChatMessages(chatId) {
+  try {
+    showChatLoading();
+    
+    const apiUrl = window.getApiUrl ? window.getApiUrl() : 
+                  (window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000');
+    
+    // Try to load messages
+    console.log(`Loading messages for chat: ${chatId}`);
+    const response = await fetch(`${apiUrl}/api/messages/${chatId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to load messages: ${response.status}`);
+    }
+    
+    const messages = await response.json();
+    console.log(`Loaded ${messages.length} messages`);
+    
+    // Display messages
+    displayMessages(messages);
+    
+    hideChatLoading();
+    
+    // Setup message form now that we have loaded messages
+    setupMessageForm(chatId);
+    
+    // Mark chat as read (optional, server already does this)
+    markChatAsRead(chatId);
+    
+  } catch (error) {
+    console.error('Error loading chat messages:', error);
+    showChatError("Couldn't load messages. Please try again.");
+  }
+}
+
+/**
+ * Create a message element
+ */
+function createMessageElement(message, isOwnMessage) {
+  const messageElement = document.createElement('div');
+  messageElement.className = isOwnMessage 
+    ? 'chat-message chat-message-right mb-4'
+    : 'chat-message chat-message-left mb-4';
+  
+  // Format time
+  const time = formatMessageTime(message.createdAt || new Date());
+  
+  // Get sender name - use senderName if available, otherwise show "User"
+  const senderName = message.senderName || 'User';
+  
+  // Check for special message types
+  const isOfferMessage = message.content && message.content.includes("I've submitted an offer for");
+  const isSystemMessage = message.messageType === 'system';
+  
+  // Base style classes
+  let containerClass = isOwnMessage 
+    ? 'bg-primary-light text-gray-800 rounded-lg rounded-tr-none py-2 px-4 inline-block'
+    : 'bg-white border border-gray-200 text-gray-800 rounded-lg rounded-tl-none py-2 px-4 inline-block';
+  
+  // Special style for offer messages
+  if (isOfferMessage) {
+    containerClass = isOwnMessage 
+      ? 'bg-green-50 border border-green-200 text-gray-800 rounded-lg rounded-tr-none py-2 px-4 inline-block'
+      : 'bg-green-50 border border-green-200 text-gray-800 rounded-lg rounded-tl-none py-2 px-4 inline-block';
+  } else if (isSystemMessage) {
+    containerClass = 'bg-gray-100 text-gray-700 rounded-lg py-2 px-4 inline-block';
+  }
+  
+  // Format content with extra styling for offer messages
+  let displayContent = message.content || '';
+  if (isOfferMessage) {
+    // Apply nice formatting to offer messages
+    displayContent = message.content
+      .replace("I've submitted an offer for", "<strong>I've submitted an offer for</strong>")
+      .replace(/•\s(.*?):/g, '<br>• <strong>$1:</strong>')
+      .replace(/₹(\d+)/g, '₹<strong>$1</strong>');
+  }
+  
+  messageElement.innerHTML = `
+    <div class="${isOwnMessage ? 'flex flex-col items-end' : 'flex flex-col'}">
+      ${!isOwnMessage ? `<span class="text-xs text-gray-500 mb-1">${senderName}</span>` : ''}
+      <div class="${containerClass}">
+        <div class="message-content">${displayContent}</div>
+      </div>
+      <span class="text-xs text-gray-500 mt-1">${time}</span>
+    </div>
+  `;
+  
+  return messageElement;
+}
+
+/**
+ * Display chat messages
+ */
+function displayMessages(messages) {
+  const messagesContainer = document.getElementById('messages-container');
+  if (!messagesContainer) return;
+  
+  // Clear container
+  messagesContainer.innerHTML = '';
+  
+  // Check if we have messages
+  if (!messages || messages.length === 0) {
+    messagesContainer.innerHTML = `
+      <div class="text-center py-8 text-gray-500">
+        <p>No messages yet. Send a message to start the conversation.</p>
+      </div>
+    `;
+    return;
+  }
+  
+  // Get current user ID
+  const currentUserId = localStorage.getItem('userId');
+  
+  // Display messages
+  messages.forEach(message => {
+    const isOwnMessage = message.senderId === currentUserId;
+    const messageElement = createMessageElement(message, isOwnMessage);
+    messagesContainer.appendChild(messageElement);
+  });
+  
+  // Scroll to bottom
+  scrollToBottom();
+}
+
+/**
+ * Setup message form to send new messages
+ */
+function setupMessageForm(chatId) {
+  const messageForm = document.getElementById('message-form');
+  const messageInput = document.getElementById('message-input');
+  
+  if (!messageForm || !messageInput) return;
+  
+  messageForm.onsubmit = async function(e) {
+    e.preventDefault();
+    
+    const content = messageInput.value.trim();
+    if (!content) return;
+    
+    // Disable form during submission
+    messageInput.disabled = true;
+    const submitBtn = messageForm.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    submitBtn.disabled = true;
+    
+    try {
+      const apiUrl = window.getApiUrl ? window.getApiUrl() : 
+                    (window.API_CONFIG ? window.API_CONFIG.API_URL : 'http://localhost:9000');
+      
+      // Get current user name
+      const currentUserName = localStorage.getItem('username') || 'You';
+      
+      // Send message
+      const response = await fetch(`${apiUrl}/api/chats/${chatId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          chatId,
+          content,
+          senderName: currentUserName
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to send message: ${response.status}`);
+      }
+      
+      // Add message to UI immediately
+      const sentMessage = await response.json();
+      
+      const messagesContainer = document.getElementById('messages-container');
+      
+      // Clear empty state if it exists
+      if (messagesContainer.querySelector('p') && messagesContainer.querySelectorAll('div.chat-message').length === 0) {
+        messagesContainer.innerHTML = '';
+      }
+      
+      const messageElement = createMessageElement(sentMessage, true);
+      messagesContainer.appendChild(messageElement);
+      
+      // Scroll to bottom
+      scrollToBottom();
+      
+      // Clear input
+      messageInput.value = '';
+    } catch (error) {
+      console.error('Error sending message:', error);
+      alert('Failed to send message. Please try again.');
+    } finally {
+      // Re-enable form
+      messageInput.disabled = false;
+      submitBtn.innerHTML = originalBtnText;
+      submitBtn.disabled = false;
+      messageInput.focus();
+    }
+  };
+}
+
+/**
+ * Show chat loading state
+ */
+function showChatLoading() {
+  const loadingContainer = document.getElementById('chat-loading');
+  const messagesContainer = document.getElementById('messages-container');
+  const errorContainer = document.getElementById('chat-error');
+  
+  if (loadingContainer) loadingContainer.classList.remove('hidden');
+  if (messagesContainer) messagesContainer.classList.add('hidden');
+  if (errorContainer) errorContainer.classList.add('hidden');
+}
+
+/**
+ * Hide chat loading state
+ */
+function hideChatLoading() {
+  const loadingContainer = document.getElementById('chat-loading');
+  const messagesContainer = document.getElementById('messages-container');
+  
+  if (loadingContainer) loadingContainer.classList.add('hidden');
+  if (messagesContainer) messagesContainer.classList.remove('hidden');
+}
+
+/**
+ * Show chat error message
+ */
+function showChatError(message) {
+  const loadingContainer = document.getElementById('chat-loading');
+  const messagesContainer = document.getElementById('messages-container');
+  const errorContainer = document.getElementById('chat-error');
+  const errorMessage = document.getElementById('chat-error-message');
+  
+  if (loadingContainer) loadingContainer.classList.add('hidden');
+  if (messagesContainer) messagesContainer.classList.add('hidden');
+  
+  if (errorContainer && errorMessage) {
+    errorMessage.textContent = message;
+    errorContainer.classList.remove('hidden');
+  } else {
+    console.error('Chat error containers not found in DOM');
+    alert(message);
   }
 }

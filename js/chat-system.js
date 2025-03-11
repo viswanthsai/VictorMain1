@@ -132,7 +132,8 @@ class ChatSystem {
         
         try {
             const messageData = {
-                content
+                content,
+                senderName: localStorage.getItem('username') || 'User' // Include sender name
             };
             
             // Add task info if provided
@@ -191,17 +192,48 @@ class ChatSystem {
      * Contact user about a task
      */
     async contactUserAboutTask(taskId, recipientId, message) {
+        if (!this.token) {
+            throw new Error('User not logged in');
+        }
+        
         try {
-            // First create or get chat
+            // First create/get a chat with this user
             const chatId = await this.createOrGetChat(taskId, recipientId);
             
-            // Then send message
-            await this.sendMessage(chatId, message);
+            // Then send the message in that chat
+            if (message) {
+                await this.sendMessage(chatId, message, { taskId });
+            }
             
+            // Return the chat ID for redirection
             return chatId;
-            
         } catch (error) {
-            console.error('Error contacting user:', error);
+            console.error('Error contacting user about task:', error);
+            throw error;
+        }
+    }
+    
+    // Add this method to handle offer-specific messages
+    async sendOfferMessage(chatId, taskId, offerDetails) {
+        if (!this.token) {
+            throw new Error('User not logged in');
+        }
+        
+        try {
+            const message = `📋 I've submitted an offer for your task: 
+• Price: ₹${offerDetails.price}
+• Timeline: ${offerDetails.timeline} days
+• Message: "${offerDetails.message}"`;
+            
+            await this.sendMessage(chatId, message, { 
+                taskId: taskId,
+                messageType: 'offer',
+                offerData: offerDetails
+            });
+            
+            return true;
+        } catch (error) {
+            console.error('Error sending offer message:', error);
             throw error;
         }
     }

@@ -25,7 +25,8 @@ app.use((req, res, next) => {
     'victormain1.onrender.com',
     'victortasks.site',
     'www.victortasks.site',
-    'localhost'
+    'localhost',
+    '127.0.0.1'  // Add this line
   ];
   
   const host = req.hostname;
@@ -85,8 +86,10 @@ const corsOptions = {
     'http://victortasks.site',
     'https://www.victortasks.site',
     'http://www.victortasks.site',
-    'http://localhost:3000',  // For local development
-    'http://localhost:9000'   // For local API
+    'http://localhost:5502',
+    'http://127.0.0.1:5502',  // Add this line
+    'http://localhost:9000',
+    'http://127.0.0.1:9000'   // Add this line
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   credentials: true,
@@ -1905,7 +1908,30 @@ app.get('/api/chats/:chatId/messages', authenticateToken, async (req, res) => {
         return res.status(403).json({ message: 'Not authorized to view messages for this chat' });
       }
       
-      const messages = await Message.find({ chatId }).lean();
+      // Get messages with populated sender information
+      const messages = await Message.find({ chatId })
+        .sort({ createdAt: 'asc' })
+        .lean();
+      
+      // If any message doesn't have senderName, add it from User collection
+      for (let i = 0; i < messages.length; i++) {
+        if (!messages[i].senderName && messages[i].senderId) {
+          try {
+            const sender = await User.findById(messages[i].senderId).lean();
+            if (sender) {
+              messages[i].senderName = sender.fullname || sender.username || 'User';
+            }
+          } catch (e) {
+            console.warn(`Could not get sender name for message ${messages[i]._id}`);
+          }
+        }
+      }
+      
+      // Mark messages as read
+      await Message.updateMany(
+        { chatId, senderId: { $ne: userId }, read: false },
+        { $set: { read: true } }
+      );
       
       res.json(messages);
     } else {
@@ -1950,17 +1976,33 @@ app.post('/api/chats/:chatId/messages', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Content and chatId are required' });
     }
     
-    // Get sender name
-    let senderName = 'User';
+    // Ensure chat exists and user is a participant
+    const chat = await Chat.findById(chatId);
+    if (!chat) {
+      return res.status(404).json({ message: 'Chat not found' });
+    }
+    
+    if (!chat.participants.includes(senderId)) {
+      return res.status(403).json({ message: 'Not authorized to send messages in this chat' });
+    }
+    
+    // Get sender name from database
+    let senderName = 'Unknown User';
     if (mongoConnected) {
       try {
         const sender = await User.findById(senderId);
         if (sender) {
-          senderName = sender.fullname || sender.username || 'User';
+          senderName = sender.fullname || sender.username || sender.email || 'User';
         }
       } catch (error) {
         console.error('Error finding sender:', error);
-        // Continue with default name
+      }
+    } else {
+      // If using file-based storage, get from users file
+      const users = await readData(USERS_FILE);
+      const sender = users.find(u => u.id === senderId);
+      if (sender) {
+        senderName = sender.fullname || sender.username || sender.email || 'User';
       }
     }
     
@@ -2276,3 +2318,138 @@ async function startServer() {
 }
 
 startServer();
+
+// Chat routes
+app.post('/api/chats', authenticateJWT, async (req, res) => {
+  try {
+    const { recipientId, taskId } = req.body;
+    const senderId = req.user.id;
+    
+    if (!recipientId) {
+      return res.status(400).json({ message: 'Recipient ID is required' });
+    }
+    
+    // Check if a chat already exists between these users for this task
+    let chat;
+    if (taskId) {
+      chat = await Chat.findOne({
+        taskId,
+        $or: [
+          { participants: { $all: [senderId, recipientId] } },
+          { sender: senderId, recipient: recipientId },
+          { sender: recipientId, recipient: senderId }
+        ]
+      });
+    } else {
+      chat = await Chat.findOne({
+        $or: [
+          { participants: { $all: [senderId, recipientId] } },
+          { sender: senderId, recipient: recipientId },
+          { sender: recipientId, recipient: senderId }
+        ]
+      });
+    }
+    
+    // If chat doesn't exist, create new one
+    if (!chat) {
+      chat = new Chat({
+        participants: [senderId, recipientId],
+        sender: senderId,
+        recipient: recipientId,
+        taskId
+      });
+      await chat.save();
+    }
+    
+    res.status(201).json({ id: chat._id, chatId: chat._id });
+  } catch (error) {
+    console.error('Error creating chat:', error);
+    res.status(500).json({ message: 'Server error creating chat' });
+  }
+});
+
+// Message routes
+app.post('/api/messages', authenticateJWT, async (req, res) => {
+  try {
+    const { chatId, content } = req.body;
+    const sender = req.user.id;
+    
+    if (!chatId || !content) {
+      return res.status(400).json({ message: 'Chat ID and content are required' });
+    }
+    
+    // Find the chat to ensure it exists and user is a participant
+    const chat = await Chat.findById(chatId);
+    if (!chat) {
+      return res.status(404).json({ message: 'Chat not found' });
+    }
+    
+    // Check if user is a participant in this chat
+    if (!chat.participants.includes(sender)) {
+      return res.status(403).json({ message: 'Not authorized to send messages in this chat' });
+    }
+    
+    // Create new message
+    const message = new Message({
+      chatId,
+      sender,
+      content
+    });
+    
+    await message.save();
+    
+    // Update chat with latest message
+    chat.lastMessage = content;
+    chat.lastMessageTime = Date.now();
+    chat.unreadCount = chat.unreadCount || {};
+    
+    // Mark as unread for recipient
+    chat.participants.forEach(participantId => {
+      if (participantId.toString() !== sender.toString()) {
+        chat.unreadCount[participantId] = (chat.unreadCount[participantId] || 0) + 1;
+      }
+    });
+    
+    await chat.save();
+    
+    // Return the new message
+    res.status(201).json(message);
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({ message: 'Server error sending message' });
+  }
+});
+
+// Get messages for a chat
+app.get('/api/chats/:chatId/messages', authenticateJWT, async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const userId = req.user.id;
+    
+    // Verify chat exists and user is a participant
+    const chat = await Chat.findById(chatId);
+    if (!chat) {
+      return res.status(404).json({ message: 'Chat not found' });
+    }
+    
+    // Check if user is a participant
+    if (!chat.participants.includes(userId)) {
+      return res.status(403).json({ message: 'Not authorized to view this chat' });
+    }
+    
+    // Get messages for this chat
+    const messages = await Message.find({ chatId })
+      .sort({ createdAt: 'asc' })
+      .limit(100);
+    
+    // Mark messages as read for this user
+    chat.unreadCount = chat.unreadCount || {};
+    chat.unreadCount[userId] = 0;
+    await chat.save();
+    
+    res.json(messages);
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    res.status(500).json({ message: 'Server error fetching messages' });
+  }
+});

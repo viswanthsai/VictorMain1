@@ -1,31 +1,19 @@
 const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
 
-const chatSchema = new Schema({
+const chatSchema = new mongoose.Schema({
   participants: [{
-    type: Schema.Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   }],
   taskId: {
-    type: Schema.Types.ObjectId,
-    ref: 'Task',
-    required: true
-  },
-  offerId: {
-    type: Schema.Types.ObjectId,
-    ref: 'Offer'
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Task'
   },
   lastMessage: {
-    text: String,
-    sender: {
-      type: Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    timestamp: {
-      type: Date,
-      default: Date.now
-    }
+    content: String,
+    senderId: mongoose.Schema.Types.ObjectId,
+    timestamp: Date
   },
   createdAt: {
     type: Date,
@@ -37,10 +25,9 @@ const chatSchema = new Schema({
   }
 });
 
-// Update the updatedAt timestamp on save
-chatSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
-  next();
-});
+// Add indexes for faster querying
+chatSchema.index({ participants: 1 });
+chatSchema.index({ taskId: 1, participants: 1 });
+chatSchema.index({ updatedAt: -1 });
 
 module.exports = mongoose.model('Chat', chatSchema);
