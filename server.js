@@ -2320,7 +2320,7 @@ async function startServer() {
 startServer();
 
 // Chat routes
-app.post('/api/chats', authenticateJWT, async (req, res) => {
+app.post('/api/chats', authenticateToken, async (req, res) => {
   try {
     const { recipientId, taskId } = req.body;
     const senderId = req.user.id;
@@ -2369,7 +2369,7 @@ app.post('/api/chats', authenticateJWT, async (req, res) => {
 });
 
 // Message routes
-app.post('/api/messages', authenticateJWT, async (req, res) => {
+app.post('/api/messages', authenticateToken, async (req, res) => {
   try {
     const { chatId, content } = req.body;
     const sender = req.user.id;
@@ -2421,7 +2421,7 @@ app.post('/api/messages', authenticateJWT, async (req, res) => {
 });
 
 // Get messages for a chat
-app.get('/api/chats/:chatId/messages', authenticateJWT, async (req, res) => {
+app.get('/api/chats/:chatId/messages', authenticateToken, async (req, res) => {
   try {
     const { chatId } = req.params;
     const userId = req.user.id;
